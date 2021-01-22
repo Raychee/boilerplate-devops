@@ -44,6 +44,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
 
 DIR_IMAGES="${DIR_IMAGES:-images}"
 DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-}"
+SCRIPT_PREBUILD_NAME="prebuild"
 
 
 ### Validation. Error out if the things required for your script are not present
@@ -86,9 +87,16 @@ fi
 
 for __image_name in "${__image_names[@]}"; do
   __image_tag="${DOCKER_NAMESPACE}/${__image_name}"
+  __image_dir="${__dir}/${DIR_IMAGES}/${__image_name}"
   if [[ "${arg_f:-}" = "1" ]] || ! is_docker_image_exist "${__image_tag}"; then
+    __custom_build_script_path="${__image_dir}/${SCRIPT_PREBUILD_NAME}"
+    if [[ -s "${__custom_build_script_path}" ]]; then
+      info "Execute customized prebuild script in ${__custom_build_script_path}."
+      # shellcheck disable=SC1090
+      (cd "${__image_dir}" && ./"${SCRIPT_PREBUILD_NAME}")
+    fi
     info "Building image: ${__image_name}"
-    exec_with_debug docker build -t "${__image_tag}" "${__dir}/${DIR_IMAGES}/${__image_name}"
+    exec_with_debug docker build -t "${__image_tag}" "${__image_dir}"
     exec_with_debug docker push "${__image_tag}"
     info "Building image completes: ${__image_name}"
   fi

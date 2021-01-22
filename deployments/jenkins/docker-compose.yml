@@ -1,5 +1,7 @@
 version: "3.8"
 
+x-deploy:
+  docker_compose_only: true
 
 services:
   jenkins:
@@ -20,7 +22,6 @@ services:
     volumes:
       - jenkins:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${DOCKER_PATH}:/usr/bin/docker
 
 
 networks:
