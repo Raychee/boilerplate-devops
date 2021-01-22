@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Transfer a local docker volume into a remote volume through ssh. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./docker-volume-scp -f <local_docker_volume> -t <remote_docker_volume>
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -f --from      {source} The local docker volume. Required.
+  -a --addr      {remote} The remote host address compatible with ssh. Required.
+  -t --to        [target] The remote docker volume to copy into. Defaults to the same as local source volume.
+  -o --overwrite          Overwrite the remote volume if it already exists. 
+  -z --compress           Dump as a compressed tar file (tar.gz).
+  -h --help               This page.
+  -v                      Enable verbose mode, print script as it is executed.
+  -d --debug              Enables debug mode.
+  -n --no-color           Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script transfers all the files from a local docker volume into a remote volume through ssh.
+ 
+ The target volume specified by -t (--to) must not exist, unless -o (--overwrite) is given.
+ 
+ There will be at most 5 ssh operations, which would require user name and password each time. 
+ So it is recommended to leverage tools like "ssh-copy-id" beforehand to enable auto login.
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+docker volume inspect "${arg_f:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_f}\" does not exist."
+ssh "${arg_a:?}" "which docker > /dev/null" || help "The remote host ${arg_a} does not have docker properly installed."
+
+__target_volume_name="${arg_t:-"${arg_f}"}"
+# shellcheck disable=SC2029
+if [[ "${arg_o:?}" = "0" ]] && ssh "${arg_a:?}" "docker volume inspect ${__target_volume_name} > /dev/null 2>&1"; then
+  help "Target docker volume \"${__target_volume_name}\" already exists on remote host ${arg_a}."
+fi
+
+
+### Runtime
+##############################################################################
+
+if [[ "${arg_z:?}" = "1" ]]; then
+  __tar_arg="z"
+else 
+  __tar_arg=
+fi
+
+if [[ -z "$(ssh "${arg_a}" "docker images -q busybox")" ]]; then
+  info "Remote host doesn't have image \"busybox\" for transfer. Copy the image from local."
+  exec_with_debug docker pull busybox
+  exec_with_debug "docker save busybox | ssh \"${arg_a}\" \"docker load\""
+fi
+
+info "Transfer local docker volume \"${arg_f}\" into volume \"${__target_volume_name}\" on remote host ${arg_a}."
+# shellcheck disable=SC2029
+exec_with_debug "docker run --rm --volume \"${arg_f}\":/__volume__" \
+  "busybox sh -c \"tar -${__tar_arg}cvf - /__volume__\" |" \
+  "ssh \"${arg_a}\" \"docker run --rm --interactive --volume ${__target_volume_name}:/__volume__" \
+    "busybox sh -c \\\"tar -${__tar_arg}xf - -C /__volume__ --strip 1\\\"\""

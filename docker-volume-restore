@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Restore a docker volume from a dumped tar file. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./docker-volume-restore -f ./<docker_volume>.tar
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -f --from     {tar_path} The path to the tar file. Required.
+  -t --to       [volume]   The target docker volume name to restore. Defaults to the name of the tar file (without its ".tar" suffix).
+  -h --help                This page.
+  -v                       Enable verbose mode, print script as it is executed.
+  -d --debug               Enables debug mode.
+  -n --no-color            Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script restores a docker volume from a dumped tar file produced by the script "docker-volume-dump".
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+[[ -s ${arg_f:?} ]] || help "File ${arg_f} does not exist."
+
+if [[ "${arg_f}" = */* ]]; then
+  __target_file_dir="${arg_f%/*}"
+else 
+  __target_file_dir="."
+fi
+__target_file_name="${arg_f##*/}"
+if [[ "${__target_file_dir}" != /* ]]; then
+  __target_file_dir=$(cd "$(pwd)/${__target_file_dir}" && pwd)
+fi
+__target_file_path="${__target_file_dir}/${__target_file_name}"
+[[ -s ${__target_file_path} ]] || help "File ${__target_file_path} does not exist."
+
+
+### Runtime
+##############################################################################
+
+if [[ "${arg_t:-}" ]]; then
+  __docker_volume_name="${arg_t}"
+else 
+  __docker_volume_name="${__target_file_name%%.*}"
+fi
+if [[ "${__target_file_name}" = *.gz ]]; then
+  __tar_arg="z"
+else 
+  __tar_arg=
+fi
+
+info "Restore docker volume \"${__docker_volume_name}\" from file ${__target_file_path}."
+exec_with_debug docker run --rm \
+  --volume "${__docker_volume_name}":/__volume__ --volume "${__target_file_dir}":/__host_dir__ busybox \
+  tar -${__tar_arg}xvf "/__host_dir__/${__target_file_name}" -C /__volume__ --strip 1

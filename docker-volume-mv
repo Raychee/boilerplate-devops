@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Move a docker volume into another volume. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./docker-volume-mv -f <source_docker_volume> -t <target_docker_volume>
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -f --from      {source} The docker volume to copy. Required.
+  -t --to        {target} The target docker volume to copy into. Required.
+  -o --overwrite          Overwrite the target volume if it already exists. 
+  -r --rm                 Remove the source volume when completes. 
+  -h --help               This page.
+  -v                      Enable verbose mode, print script as it is executed.
+  -d --debug              Enables debug mode.
+  -n --no-color           Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script moves all the files from a docker volume into another volume.
+ The target volume specified by -t (--to) must not exist, unless -o (--overwrite) is given. 
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+docker volume inspect "${arg_f:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_f}\" does not exist."
+if [[ "${arg_o:?}" = "0" ]] && docker volume inspect "${arg_t:?}" > /dev/null 2>&1; then
+  help "Target docker volume \"${arg_t}\" already exists."
+fi
+
+
+### Runtime
+##############################################################################
+
+info "Move docker volume \"${arg_f}\" into volume \"${arg_t}\"."
+exec_with_debug docker run --rm \
+  --volume "${arg_f}":/__src_vol__ --volume "${arg_t}":/__dst_vol__ busybox \
+  sh -c "mv -v /__src_vol__/* /__dst_vol__/"
+if [[ "${arg_r}" = "1" ]]; then
+  exec_with_debug docker volume rm "${arg_f}"
+fi

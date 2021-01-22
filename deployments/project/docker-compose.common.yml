@@ -1,0 +1,24 @@
+version: "3.8"
+
+# This is the base deployment config. The main purpose is to:
+# 1.  List all of the services & dbs volumes in the system for ALL environments 
+# 2.  Make sure all of the services are attached to the same overlay network "<project>"
+# 3.  Make sure all of the services are passed proper environment variables "<PROJECT>_..."
+# 4.  Add labels "service=<service>" for each of the services
+# 5.  Configure fail-over handling such as "deploy.restart_policy.condition: on-failure" 
+# 6.  Configure COMMON placement constraints in "deploy.placement.constraints" such as "proxy_allowed==true" 
+# 7.  Mount the data volumes of all dbs
+# 8.  Do NOT specify "image" for ALL the services EXCEPT for fundamental infrastructural services (e.g. dbs),
+#     as each service may use different version of the images for different environments
+# 9.  NO image building context should be specified. Every image should be built before deployment.
+# 10. NO port publishing is allowed in this file
+
+
+services:
+
+
+volumes:
+
+
+networks:
+  project:

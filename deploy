@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Deploy services into docker swarm. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./deploy
+
+
+### Global Variable Definition
+##############################################################################
+
+DIR_DEPLOYMENTS="${DIR_DEPLOYMENTS:-deployments}"
+PROJECT_NAME="${PROJECT_NAME:-}"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -s --stack [stack] The stack name to deploy. Default="${PROJECT_NAME}".
+                     The stack name should match one of the directory name inside "${DIR_DEPLOYMENTS}".
+                     If this is the only argument and no others are provided, this script will invoke command 
+                     "docker stack deploy <stack>". 
+  -p --ps            Invoke command "docker stack ps <stack>".
+  -l --services      Invoke command "docker stack services <stack>".
+  -r --rm            Invoke command "docker stack rm <stack>".
+  -b --no-build      Skip image building checks before deploying.
+  -h --help          This page.
+  -v                 Enable verbose mode, print script as it is executed.
+  -d --debug         Enables debug mode.
+  -n --no-color      Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script will deploy or update a docker stack based on project's environment configurations.
+ Note: Please switch to the desired environment before calling this script.
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Dependent Variable Definition
+##############################################################################
+
+__var_project_environment="$(to_upper "${PROJECT_NAME}")_ENVIRONMENT"
+PROJECT_ENVIRONMENT="${!__var_project_environment:-}"
+
+
+### Coerce
+##############################################################################
+
+arg_s="${arg_s:-${PROJECT_NAME}}"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+[[ "${arg_s}" ]] || \
+  help "Stack name is not provided and cannot be inferred (variable PROJECT_NAME is not defined)."
+
+[[ -d "${__dir}/${DIR_DEPLOYMENTS}/${arg_s:?}" ]] || 
+  help "Stack name \"${arg_s:?}\" does not exist in folder \"${__dir}/${DIR_DEPLOYMENTS}\"."
+
+[[ ${arg_s:?} = "${PROJECT_NAME}" && -z "${PROJECT_ENVIRONMENT:-}" ]] && \
+  help "Variable ${__var_project_environment} need to be defined for project stack \"${PROJECT_NAME}\"."
+
+if [[ "${PROJECT_ENVIRONMENT:-}" ]]; then
+  [[ "${PROJECT_ENVIRONMENT}" = "dev" || "${PROJECT_ENVIRONMENT}" = "test" ||
+     "${PROJECT_ENVIRONMENT}" = "staging" || "${PROJECT_ENVIRONMENT}" = "release" ]] || \
+    help "Variable ${__var_project_environment} should be either of the followings: dev test staging production," \
+         "got \"${PROJECT_ENVIRONMENT}\""
+fi
+
+
+### Runtime
+##############################################################################
+
+if [[ ${arg_s} = "${PROJECT_NAME}" ]]; then
+  __stack="${PROJECT_NAME}_${PROJECT_ENVIRONMENT}"
+else 
+  __stack="${arg_s}"
+fi
+
+if [[ ${arg_p:?} = "1" ]]; then
+  
+  exec_with_debug docker stack ps "${__stack}"
+  
+elif [[ ${arg_s:?} = "1" ]]; then
+  
+  exec_with_debug docker stack services "${__stack}"
+
+elif [[ ${arg_r:?} = "1" ]]; then
+  
+  exec_with_debug docker stack rm "${__stack}"  
+  
+else
+  
+  if [[ "${arg_b:?}" = "0" ]]; then
+    info "Ensure all the images are built."
+    "${__dir}"/build -a
+  fi
+  
+  info "Deploy stack ${__stack} into swarm."
+  __docker_compose_dir="${__dir}/${DIR_DEPLOYMENTS}/${arg_s}"
+  __docker_compose_file="${__docker_compose_dir}/docker-compose.yml"
+  __docker_compose_file_common="${__docker_compose_dir}/docker-compose.common.yml"
+  __docker_compose_file_env="${__docker_compose_dir}/docker-compose.${PROJECT_ENVIRONMENT}.yml"
+  if [[ ${arg_s} = "${PROJECT_NAME}" ]]; then
+    if [[ ! -s "${__docker_compose_file_common}" ]]; then
+      error "Docker compose file ${__docker_compose_file_common} is not found."
+      exit 1
+    elif [[ ! -s "${__docker_compose_file_env}" ]]; then
+      error "Docker compose file ${__docker_compose_file_env} is not found."
+      exit 1
+    fi
+  fi
+  if [[ -s "${__docker_compose_file}" ]]; then
+    exec_with_debug docker stack deploy \
+      --compose-file "${__docker_compose_file}" \
+      "${__stack}"
+  elif [[ -s "${__docker_compose_file_common}" && -s "${__docker_compose_file_env}" ]]; then
+    exec_with_debug docker stack deploy \
+      --compose-file "${__docker_compose_file_common}" \
+      --compose-file "${__docker_compose_file_env}" \
+      "${__stack}"
+  else
+    error "Neither file \"docker-compose.yml\" nor files \"docker-compose.common.yml\" and" \
+          "\"docker-compose.${PROJECT_ENVIRONMENT}.yml\" have been found in ${__docker_compose_dir}."
+  fi
+  
+fi

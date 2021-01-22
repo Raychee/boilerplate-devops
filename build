@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Build images. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./build -i jenkins:0.1.0
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -i --image  [arg] Image names to be built. Can be repeated. Required if -a (--all) is not provided.
+  -a --all          Build all images inside "${DIR_IMAGES}" folder. Required if -i (--image) is not provided.
+  -f --force        Force building the image(s) even if they already exist.
+  -h --help         This page.
+  -v                Enable verbose mode, print script as it is executed.
+  -d --debug        Enables debug mode.
+  -n --no-color     Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script builds the images inside the "${DIR_IMAGES}" folder.
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Variable Definition
+##############################################################################
+
+DIR_IMAGES="${DIR_IMAGES:-images}"
+DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-localhost:5000}"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+[[ "${arg_i:-}" || "${arg_a:?}" = "1" ]] || help "Either -i (--image) or -a (--all) is required."
+[[ "${arg_i:-}" && "${arg_a:?}" = "1" ]] && help "-i (--image) or -a (--all) cannot be specified at the same time."
+
+if is_array arg_i; then
+  for __image_name in "${arg_i[@]}"; do
+    if [[ ! -d "${__dir}/${DIR_IMAGES}/${__image_name}" ]]; then
+      help "Image name ${__image_name} does not exist in folder \"${__dir}/${DIR_IMAGES}\"."
+    fi
+  done
+fi
+
+
+### Runtime
+##############################################################################
+
+if is_array arg_i; then
+  __image_names=("${arg_i[@]}")
+else
+  __image_names=()
+  for __image_dir_path in "${DIR_IMAGES}"/*; do
+    if [[ -d "${__dir}/${__image_dir_path}" ]]; then
+      __image_names+=("${__image_dir_path##*/}")
+    fi
+  done
+fi
+
+if ! is_array __image_names; then
+  help "There are no images to be built."
+fi
+
+for __image_name in "${__image_names[@]}"; do
+  __image_tag="${DOCKER_NAMESPACE}/${__image_name}"
+  if [[ "${arg_f:-}" || "$(docker images -q "${__image_tag}" 2> /dev/null)" ]]; then
+    info "Building image: ${__image_name}"
+    exec_with_debug docker build -t "${__image_tag}" "${__dir}/${DIR_IMAGES}/${__image_name}"
+    exec_with_debug docker push "${__image_tag}"
+    info "Building image completes: ${__image_name}"
+  fi
+done

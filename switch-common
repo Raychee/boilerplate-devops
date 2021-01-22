@@ -1,0 +1,2 @@
+export DOCKER_PATH=$(which docker)
+export PROJECT_NAME=project

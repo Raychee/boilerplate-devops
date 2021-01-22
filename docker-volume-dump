@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Dump a docker volume into a tar file. 
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./docker-volume-dump -f <docker_volume>
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
+  -f --from     {volume} The docker volume name. Required.
+  -t --to       [dir]    The directory path into which the tar file is dumped. Default=".".
+  -z --compress          Dump as a compressed tar file (tar.gz).
+  -h --help              This page.
+  -v                     Enable verbose mode, print script as it is executed.
+  -d --debug             Enables debug mode.
+  -n --no-color          Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
+ This script backs up a docker volume by dumping all the files into a single tar file.
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+docker volume inspect "${arg_f:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_f}\" does not exist."
+[[ -d ${arg_t:?} ]] || help "Target directory ${arg_t} does not exist."
+
+if [[ "${arg_t}" = /* ]]; then
+  __target_dir=
+else
+  __target_dir=$(cd "$(pwd)/${arg_t}" && pwd)
+fi
+[[ -d ${__target_dir} ]] || help "Target directory ${__target_dir} does not exist."
+
+
+### Runtime
+##############################################################################
+
+if [[ "${arg_z}" = "1" ]]; then
+  __target_file_name="${arg_f}.tar.gz"
+  __tar_arg="z"
+else 
+  __target_file_name="${arg_f}.tar"
+  __tar_arg=
+fi
+
+info "Dump docker volume \"${arg_f}\" into ${arg_t}/${__target_file_name}."
+exec_with_debug docker run --rm \
+  --volume "${arg_f}":/__volume__ --volume "${__target_dir}":/__host_dir__ busybox \
+  tar -${__tar_arg}cvf "/__host_dir__/${__target_file_name}" /__volume__

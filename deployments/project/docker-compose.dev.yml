@@ -1,0 +1,15 @@
+version: "3.8"
+
+# This is the deployment config for development (dev) environment.
+# This environment works as a playground for all developers. So, 
+# 1. Only fundamental infrastructural services (e.g. dbs) should be deployed; 
+#    the others should be ALL configured with "deploy.replicas: 0"
+# 2. Customize the services' command arguments for dev
+# 3. Publish all the ports for easy connectivity / debugging
+# 4. Configure label "environment=dev" for all the services 
+# 5. Configure placement constraints by "deploy.placement.constraints" so that the services can only run on 
+#    dev-specific nodes
+# 6. Restrain memory resources for EVERY service by "deploy.placement.resources.limits.memory"
+
+
+services:

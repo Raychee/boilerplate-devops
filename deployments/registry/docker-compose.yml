@@ -1,0 +1,27 @@
+version: "3.8"
+
+
+services:
+  registry:
+    image: registry:2
+    deploy:
+      restart_policy:
+        condition: on-failure
+        window: 10s
+#      placement:
+#        constraints:
+#          - node.labels.service==logging
+    ports:
+      - 5000:5000
+    volumes:
+      - registry:/var/lib/registry
+    networks:
+      - registry
+
+
+volumes:
+  registry:
+
+
+networks:
+  registry:

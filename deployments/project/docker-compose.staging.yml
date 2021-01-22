@@ -1,0 +1,16 @@
+version: "3.8"
+
+# This is the deployment config for staging environment.
+# This environment should contain NO running services in most circumstances. Staging environment is for final 
+# testing before the service going into production. Therefore, only the services under e2e tests can be deployed in 
+# this environment, and will be removed as soon as it finishes.
+# 1. ALL the services should be deployed with "deploy.replicas: 0" EXCEPT for particular services under staging tests 
+# 2. Specify the "image" of the services
+# 3. Customize the services' command arguments for staging
+# 4. Configure label "environment=staging" for all the services
+# 5. Configure placement constraints by "deploy.placement.constraints" so that the services can only run on 
+#    staging-specific nodes
+# 6. Restrain memory resources for the services by "deploy.placement.resources.limits.memory"
+
+
+services:

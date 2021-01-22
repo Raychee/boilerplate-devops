@@ -1,0 +1,16 @@
+version: "3.8"
+
+# This is the deployment config for test environment.
+# This environment is composed of all the services fully functional. Every new version of any service should be
+# deployed in this environment for e2e tests before going to other environments.
+# 1. ALL the services should be deployed with at least "deploy.replicas: 1"
+# 2. Specify the "image" of ALL the services EXCEPT for fundamental infrastructural services (e.g. dbs)
+# 3. Customize the services' command arguments for test
+# 4. Publish all the ports for easy connectivity / debugging
+# 5. Configure label "environment=test" for all the services
+# 6. Configure placement constraints by "deploy.placement.constraints" so that the services can only run on 
+#    test-specific nodes
+# 7. Restrain memory resources for EVERY service by "deploy.placement.resources.limits.memory"
+
+
+services:
