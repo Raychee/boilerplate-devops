@@ -129,7 +129,7 @@ function is_array() {
 
 function exec_with_debug() {
     debug "${*}"
-    if ! [[ "${DRY_RUN:-}" ]]; then
+    if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
       eval "${@}"
     fi
 }

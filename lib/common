@@ -141,9 +141,13 @@ function to_upper() {
 
 function exec_with_debug() {
     debug "${*}"
-    if ! [[ "${DRY_RUN}" ]]; then
+    if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
       eval "${*}"
     fi
+}
+
+function is_docker_image_exist() {
+    DOCKER_CLI_EXPERIMENTAL=enabled docker manifest inspect --insecure "${1}" > /dev/null
 }
 
 

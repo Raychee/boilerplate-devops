@@ -1,2 +1,3 @@
-export DOCKER_PATH=$(which docker)
+export DOCKER_PATH=$(readlink $(which docker))
+export DOCKER_NAMESPACE=127.0.0.1:5000
 export PROJECT_NAME=project

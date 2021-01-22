@@ -43,11 +43,16 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
 ##############################################################################
 
 DIR_IMAGES="${DIR_IMAGES:-images}"
-DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-localhost:5000}"
+DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-}"
 
 
 ### Validation. Error out if the things required for your script are not present
 ##############################################################################
+
+if [[ -z "${DOCKER_NAMESPACE:-}" ]]; then
+  error "Variable DOCKER_NAMESPACE need to be defined for building images."
+  exit 1
+fi
 
 [[ "${arg_i:-}" || "${arg_a:?}" = "1" ]] || help "Either -i (--image) or -a (--all) is required."
 [[ "${arg_i:-}" && "${arg_a:?}" = "1" ]] && help "-i (--image) or -a (--all) cannot be specified at the same time."
@@ -81,7 +86,7 @@ fi
 
 for __image_name in "${__image_names[@]}"; do
   __image_tag="${DOCKER_NAMESPACE}/${__image_name}"
-  if [[ "${arg_f:-}" || "$(docker images -q "${__image_tag}" 2> /dev/null)" ]]; then
+  if [[ "${arg_f:-}" = "1" ]] || ! is_docker_image_exist "${__image_tag}"; then
     info "Building image: ${__image_name}"
     exec_with_debug docker build -t "${__image_tag}" "${__dir}/${DIR_IMAGES}/${__image_name}"
     exec_with_debug docker push "${__image_tag}"

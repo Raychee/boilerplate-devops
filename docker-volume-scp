@@ -68,7 +68,7 @@ else
   __tar_arg=
 fi
 
-if [[ -z "$(ssh "${arg_a}" "docker images -q busybox")" ]]; then
+if [[ -z "$(ssh "${arg_a}" "docker images -q busybox 2> /dev/null")" ]]; then
   info "Remote host doesn't have image \"busybox\" for transfer. Copy the image from local."
   exec_with_debug docker pull busybox
   exec_with_debug "docker save busybox | ssh \"${arg_a}\" \"docker load\""

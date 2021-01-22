@@ -3,7 +3,7 @@ version: "3.8"
 
 services:
   jenkins:
-    image: localhost:5000/jenkins:0.1.0
+    image: ${DOCKER_NAMESPACE}/jenkins:0.1.0
     deploy:
       replicas: 1
       restart_policy:
@@ -13,7 +13,7 @@ services:
 #        constraints:
 #          - node.labels.service==logging
     ports:
-      - 40000:8080
+      - 8080:8080
       - 50000:50000
     networks:
       - jenkins

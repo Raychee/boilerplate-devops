@@ -84,6 +84,11 @@ if [[ "${PROJECT_ENVIRONMENT:-}" ]]; then
          "got \"${PROJECT_ENVIRONMENT}\""
 fi
 
+if [[ -z "${DOCKER_NAMESPACE:-}" ]]; then
+  error "Variable DOCKER_NAMESPACE need to be defined for deploying images."
+  exit 1
+fi
+
 
 ### Runtime
 ##############################################################################
