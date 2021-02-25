@@ -24,6 +24,28 @@
     - Jira
 
 
+### 安装Github命令行程序（`hub`，不是`git`）
+
+1. 根据页面指示安装`hub`。
+
+   - 安装指引页：https://github.com/github/hub#installation
+   - 主页：https://hub.github.com/
+
+2. 创建一个personal access token从而使用`hub`来登录到Github。
+
+   - 如果未配置登录信息，`hub`运行时会动态提示输入用户名和密码，但流程有bug，是不能用的。详见说明：
+     https://github.com/github/hub/issues/2655
+     
+   - 在Github用户`jenkins`个人主页里，依次点击：  
+     右上角个人头像 > `Settings` > 左侧`Developer settings` > `Personal access tokens` > 右侧`Generate new token`
+     
+   - 勾选所有scope（可根据具体情况去掉一些），点击创建token。
+
+   - 保存好token，切勿丢失，丢失无法找回！
+   
+   - 照常使用`hub`命令，在下次它提示输入用户名和密码时，用户名正常填写，密码粘贴为token，即可成功登录。
+
+
 ### 配置代码提交规范化插件
 
 1. 确保系统安装`npm`。

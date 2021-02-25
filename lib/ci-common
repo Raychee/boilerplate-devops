@@ -85,7 +85,7 @@ function is_tag_existing() {
 }
 
 function git_local_branches_to_prune() {
-    git branch -r | awk '{print $1}' | grep -E -v -f /dev/fd/0 <(git branch -vv | grep origin) | awk '{print $1}' || true
+    git branch -r | awk '{print $1}' | grep -E -v -f /dev/fd/0 <(git branch -vv | grep "${REMOTE_ORIGIN}") | awk '{print $1}' || true
 }
 
 function is_version() {
