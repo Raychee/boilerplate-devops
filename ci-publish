@@ -93,6 +93,7 @@ for __target_branch in "${__target_branches[@]}"; do
   else 
     __pull_request_args="${__pull_request_args:-} --no-edit"
   fi
+  exec_with_info git checkout "${__branch_name}"
   exec_with_info hub pull-request "${__pull_request_args}"
 done
 
