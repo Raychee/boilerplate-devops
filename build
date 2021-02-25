@@ -8,6 +8,18 @@
 #  LOG_LEVEL=7 ./build -i jenkins:0.1.0
 
 
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
+### Variable Definition
+##############################################################################
+
+DIR_IMAGES="${DIR_IMAGES:-images}"
+DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-}"
+SCRIPT_PREBUILD_NAME="prebuild"
+
+
 ### Parse commandline options
 ##############################################################################
 
@@ -21,13 +33,14 @@
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
-  -i --image  [arg] Image names to be built. Can be repeated. Required if -a (--all) is not provided.
-  -a --all          Build all images inside "${DIR_IMAGES}" folder. Required if -i (--image) is not provided.
-  -f --force        Force building the image(s) even if they already exist.
-  -h --help         This page.
-  -v                Enable verbose mode, print script as it is executed.
-  -d --debug        Enables debug mode.
-  -n --no-color     Disable color output.
+  -a --all       Build all images inside "${DIR_IMAGES}" folder. Required if -i (--image) is not provided.
+  -f --force     Force building the image(s) even if they already exist.
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+  
+  ...images      Image names to be built. Can be repeated. Required if -a (--all) is not provided.
 EOF
 
 # shellcheck disable=SC2015
@@ -35,16 +48,9 @@ read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
  This script builds the images inside the "${DIR_IMAGES}" folder.
 EOF
 
+
 # shellcheck source=lib/common
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
-
-
-### Variable Definition
-##############################################################################
-
-DIR_IMAGES="${DIR_IMAGES:-images}"
-DOCKER_NAMESPACE="${DOCKER_NAMESPACE:-}"
-SCRIPT_PREBUILD_NAME="prebuild"
 
 
 ### Validation. Error out if the things required for your script are not present
@@ -55,11 +61,11 @@ if [[ -z "${DOCKER_NAMESPACE:-}" ]]; then
   exit 1
 fi
 
-[[ "${arg_i:-}" || "${arg_a:?}" = "1" ]] || help "Either -i (--image) or -a (--all) is required."
-[[ "${arg_i:-}" && "${arg_a:?}" = "1" ]] && help "-i (--image) or -a (--all) cannot be specified at the same time."
+[[ "${arg_images:-}" || "${arg_a:?}" = "1" ]] || help "Either images or -a (--all) is required."
+[[ "${arg_images:-}" && "${arg_a:?}" = "1" ]] && help "images or -a (--all) cannot be specified at the same time."
 
-if is_array arg_i; then
-  for __image_name in "${arg_i[@]}"; do
+if is_array arg_images; then
+  for __image_name in "${arg_images[@]}"; do
     if [[ ! -d "${__dir}/${DIR_IMAGES}/${__image_name}" ]]; then
       help "Image name ${__image_name} does not exist in folder \"${__dir}/${DIR_IMAGES}\"."
     fi
@@ -70,8 +76,8 @@ fi
 ### Runtime
 ##############################################################################
 
-if is_array arg_i; then
-  __image_names=("${arg_i[@]}")
+if is_array arg_images; then
+  __image_names=("${arg_images[@]}")
 else
   __image_names=()
   for __image_dir_path in "${DIR_IMAGES}"/*; do
@@ -85,9 +91,22 @@ if ! is_array __image_names; then
   help "There are no images to be built."
 fi
 
-for __image_name in "${__image_names[@]}"; do
-  __image_tag="${DOCKER_NAMESPACE}/${__image_name}"
-  __image_dir="${__dir}/${DIR_IMAGES}/${__image_name}"
+for __image_dir_name in "${__image_names[@]}"; do
+  if [[ "${__image_dir_name}" =~ : ]]; then
+    __image_name=${__image_dir_name%:*}
+    __image_version=${__image_dir_name##*:}
+  else
+    __image_name=${__image_dir_name}
+    __image_version=$(get_latest_version_tag)
+    __image_version=${__image_version#${PROJECT_VERSION_PREFIX}}
+  fi
+  if [[ -z "${__image_version}" ]]; then
+    error "Image version of ${__image_name} cannot be inferred."
+    exit 2
+  fi
+  __image_tag="${DOCKER_NAMESPACE}/${__image_name}:${__image_version}"
+  __image_dir="${__dir}/${DIR_IMAGES}/${__image_dir_name}"
+  
   if [[ "${arg_f:-}" = "1" ]] || ! is_docker_image_exist "${__image_tag}"; then
     __custom_build_script_path="${__image_dir}/${SCRIPT_PREBUILD_NAME}"
     if [[ -s "${__custom_build_script_path}" ]]; then
@@ -95,9 +114,11 @@ for __image_name in "${__image_names[@]}"; do
       # shellcheck disable=SC1090
       (cd "${__image_dir}" && ./"${SCRIPT_PREBUILD_NAME}")
     fi
-    info "Building image: ${__image_name}"
+    info "Building image: ${__image_name}:${__image_version}"
     exec_with_debug docker build -t "${__image_tag}" "${__image_dir}"
     exec_with_debug docker push "${__image_tag}"
     info "Building image completes: ${__image_name}"
+  else  
+    info "Image ${__image_tag} already exists."
   fi
 done

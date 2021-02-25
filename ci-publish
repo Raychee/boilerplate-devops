@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Publish a feature / release / hotfix branch.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-publish feature/01
+
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -m --message [message] The pull request message. Can be repeated.
+  -h --help              This page.
+  -v                     Enable verbose mode, print script as it is executed.
+  -d --debug             Enables debug mode.
+  -n --no-color          Disable color output.
+  
+  [branch]               The target branch to publish. Defaults to the current branch.
+                         - For ${BRANCH_NAME_FEATURE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP}. 
+                         - For ${BRANCH_NAME_RELEASE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
+                         - For ${BRANCH_NAME_HOTFIX}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script publishes a supporting branch (${BRANCH_NAME_FEATURE} / ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX})
+ by creating a pull request that bases onto the corresponding main branch (${BRANCH_NAME_MASTER} / ${BRANCH_NAME_DEVELOP}).
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+
+### Runtime
+##############################################################################
+
+setup
+
+__branch_name="${arg_branch:-${__starting_branch}}"
+
+if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
+      ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
+  error "Branch \"${__branch_name}\" cannot be published."
+  exit_ 1
+fi
+
+if ! is_branch_existing "${__branch_name}"; then
+  error "Branch \"${__branch_name}\" does not exist."
+  exit_ 1
+fi
+
+__target_branches=()
+if [[ ${__branch_name} = ${BRANCH_NAME_FEATURE}/* ]]; then
+  __target_branches=("${BRANCH_NAME_DEVELOP}")
+elif [[ ${__branch_name} = ${BRANCH_NAME_RELEASE}/* ]]; then
+  __target_branches=("${BRANCH_NAME_DEVELOP}" "${BRANCH_NAME_MASTER}")
+elif [[ ${__branch_name} = ${BRANCH_NAME_HOTFIX}/* ]]; then
+  __target_branches=("${BRANCH_NAME_DEVELOP}" "${BRANCH_NAME_MASTER}")
+fi
+
+info "Sync branch \"${__branch_name}\"."
+exec_with_info git checkout "${__branch_name}"
+exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}"
+
+for __target_branch in "${__target_branches[@]}"; do
+  info "Sync branch \"${__target_branch}\"."
+  exec_with_info git checkout "${__target_branch}"
+  exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
+  
+  info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
+  __pull_request_args="--base ${__target_branch} --force"
+  if is_array arg_m; then
+    for __message in "${arg_m[@]}"; do
+      __pull_request_args="${__pull_request_args:-} --message ${__message}"
+    done
+  else 
+    __pull_request_args="${__pull_request_args:-} --no-edit"
+  fi
+  exec_with_info hub pull-request "${__pull_request_args}"
+done
+
+exit_

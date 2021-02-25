@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Creates a feature / release / hotfix branch.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-create feature/01
+
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+  
+  {branch}       Target branch to create. Required. Must be like one of the following:
+                 - ${BRANCH_NAME_FEATURE}/<name>, e.g. "${BRANCH_NAME_FEATURE}/TASK-1" 
+                 - ${BRANCH_NAME_RELEASE}/<version>, e.g. "${BRANCH_NAME_RELEASE}/0.1.0"
+                 - ${BRANCH_NAME_RELEASE} (equivalent to ${BRANCH_NAME_RELEASE}/<version> where version is auto bumped)
+                 - ${BRANCH_NAME_HOTFIX}/<version>, e.g. "${BRANCH_NAME_HOTFIX}/0.1.1"
+                 - ${BRANCH_NAME_HOTFIX} (equivalent to ${BRANCH_NAME_HOTFIX}/<version> where version is auto bumped)
+  [base]         The ref (branch / commit hash /...) on which the new branch will be based. 
+                 Defaults to "${BRANCH_NAME_DEVELOP}" for ${BRANCH_NAME_FEATURE} or ${BRANCH_NAME_RELEASE} branches, 
+                 and "${BRANCH_NAME_MASTER}" for ${BRANCH_NAME_HOTFIX} branches.  
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script creates a ${BRANCH_NAME_FEATURE} / ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX} branch. 
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+[[ "${arg_branch:?}" =~ ^${BRANCH_NAME_FEATURE}/.+$ ]] || \
+[[ "${arg_branch:?}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]] || \
+[[ "${arg_branch:?}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]] || \
+  help "Branch name must be like \"${BRANCH_NAME_FEATURE}/*\", \"${BRANCH_NAME_RELEASE}/*\"," \
+       "or \"${BRANCH_NAME_HOTFIX}/*\"."
+
+
+### Runtime
+##############################################################################
+
+setup
+
+if [[ "${arg_branch}" =~ ^${BRANCH_NAME_FEATURE}/ ]]; then
+  
+  __branch_base="${arg_base:-${BRANCH_NAME_DEVELOP}}"
+  __branch="${arg_branch}"
+  
+  if [[ ${__branch_base} = "${BRANCH_NAME_DEVELOP}" ]]; then
+    info "Pull the latest \"${BRANCH_NAME_DEVELOP}\" branch."
+    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+    exec_with_info git pull
+  fi
+  
+  if is_branch_existing "${__branch}"; then
+    notice "Branch \"${__branch}\" already exists."
+  elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
+    notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
+    exec_with_info git checkout "${__branch}"
+  else
+    info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
+    exec_with_info git checkout -b "${__branch}" "${__branch_base}" || \
+      exit_with_error "Could not create branch \"${__branch}\"."
+    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+  fi
+  
+elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
+  
+  __branch_base="${arg_base:-${BRANCH_NAME_DEVELOP}}"
+  
+  if [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}/.+$ ]]; then
+    __version=${arg_branch#${BRANCH_NAME_RELEASE}/}
+    __branch="${arg_branch}"
+  else
+    info "No ${BRANCH_NAME_RELEASE} version is provided. Version will be inferred by bumping from the last version."
+    
+    info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
+    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
+    exec_with_info git pull
+    
+    __last_version=$(get_latest_version_tag)
+    if [[ -z "${__last_version}" ]]; then
+      __historical_version=$(git tag --list "${PROJECT_VERSION_PREFIX}*" | head -n 1)
+      if [[ -z "${__historical_version}" ]]; then
+        notice "It seems this repo is new and have no historical versions. Let's start with ${PROJECT_VERSION_INIT}."
+        __version="${PROJECT_VERSION_INIT}"
+      else 
+        error "It seems the version management is corrupted." \
+              "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
+        exit_ 2
+      fi
+    else
+      __version=$(version_bump minor "${__last_version}")
+      info "Version is bumped from ${__last_version} to ${__version}."
+    fi
+    __branch="${BRANCH_NAME_RELEASE}/${__version}"
+  fi
+  
+  if [[ ${__branch_base} = "${BRANCH_NAME_DEVELOP}" ]]; then
+    info "Pull the latest \"${BRANCH_NAME_DEVELOP}\" branch."
+    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+    exec_with_info git pull
+  fi
+  
+  if is_branch_existing "${BRANCH_NAME_RELEASE}/*"; then
+    error "There is already a ${BRANCH_NAME_RELEASE} branch. Please finish or remove it first."
+    exit_ 2
+  elif is_branch_existing "${__branch}"; then
+    notice "Branch \"${__branch}\" already exists."
+  elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
+    notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
+    exec_with_info git checkout "${__branch}"
+  else
+    info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
+    exec_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
+      exit_with_error "Could not create branch \"${__branch}\"."
+    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+  fi
+  
+elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
+  
+  __branch_base="${arg_base:-${BRANCH_NAME_MASTER}}"
+  
+  if [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}/.+$ ]]; then
+    __version=${arg_branch#${BRANCH_NAME_HOTFIX}/}
+    __branch="${arg_branch}"
+  else
+    info "No ${BRANCH_NAME_HOTFIX} version is provided. Version will be inferred by bumping from the last version."
+    
+    info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
+    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
+    exec_with_info git pull
+    __pulled_master=1
+    
+    __last_version=$(get_latest_version_tag)
+    if [[ -z "${__last_version}" ]]; then
+      __historical_version=$(git tag --list "${PROJECT_VERSION_PREFIX}*" | head -n 1)
+      if [[ -z "${__historical_version}" ]]; then
+        notice "It seems this repo is new and have no historical versions." \
+               "No need to create a ${BRANCH_NAME_HOTFIX} branch."
+        exit_ 2
+      else 
+        error "It seems the version management is corrupted." \
+              "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
+        exit_ 2
+      fi
+    else
+      __version=$(version_bump patch "${__last_version}")
+      info "Version is bumped from ${__last_version} to ${__version}."
+    fi
+    __branch="${BRANCH_NAME_HOTFIX}/${__version}"
+  fi
+  
+  if [[ ${__branch_base} = "${BRANCH_NAME_MASTER}" && -z "${__pulled_master:-}" ]]; then
+    info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
+    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
+    exec_with_info git pull
+  fi
+  
+  if is_branch_existing "${BRANCH_NAME_HOTFIX}/*"; then
+    error "There is already a ${BRANCH_NAME_HOTFIX} branch. Please finish or remove it first."
+    exit_ 2
+  elif is_branch_existing "${__branch}"; then
+    notice "Branch \"${__branch}\" already exists."
+  elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
+    notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
+    exec_with_info git checkout "${__branch}"
+  else
+    info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
+    exec_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
+      exit_with_error "Could not create branch \"${__branch}\"."
+    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+  fi
+  
+fi
+
+exit_
