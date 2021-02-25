@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-restore -f ./<docker_volume>.tar
+#  LOG_LEVEL=7 ./docker-volume-restore ./<docker_volume>.tar
 
 
 ### Parse commandline options
@@ -21,12 +21,13 @@
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
-  -f --from     {tar_path} The path to the tar file. Required.
-  -t --to       [volume]   The target docker volume name to restore. Defaults to the name of the tar file (without its ".tar" suffix).
-  -h --help                This page.
-  -v                       Enable verbose mode, print script as it is executed.
-  -d --debug               Enables debug mode.
-  -n --no-color            Disable color output.
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+  
+  {tar_path}     The path to the tar file. Required.
+  [volume]       The target docker volume name to restore. Defaults to the name of the tar file (without its ".tar" suffix).
 EOF
 
 # shellcheck disable=SC2015
@@ -41,14 +42,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
 ### Validation. Error out if the things required for your script are not present
 ##############################################################################
 
-[[ -s ${arg_f:?} ]] || help "File ${arg_f} does not exist."
+[[ -s ${arg_tar_path:?} ]] || help "File ${arg_tar_path} does not exist."
 
-if [[ "${arg_f}" = */* ]]; then
-  __target_file_dir="${arg_f%/*}"
+if [[ "${arg_tar_path}" = */* ]]; then
+  __target_file_dir="${arg_tar_path%/*}"
 else 
   __target_file_dir="."
 fi
-__target_file_name="${arg_f##*/}"
+__target_file_name="${arg_tar_path##*/}"
 if [[ "${__target_file_dir}" != /* ]]; then
   __target_file_dir=$(cd "$(pwd)/${__target_file_dir}" && pwd)
 fi
@@ -59,8 +60,8 @@ __target_file_path="${__target_file_dir}/${__target_file_name}"
 ### Runtime
 ##############################################################################
 
-if [[ "${arg_t:-}" ]]; then
-  __docker_volume_name="${arg_t}"
+if [[ "${arg_volume:-}" ]]; then
+  __docker_volume_name="${arg_volume}"
 else 
   __docker_volume_name="${__target_file_name%%.*}"
 fi

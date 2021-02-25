@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-cp -f <docker_volume> -t <docker_volume_copied>
+#  LOG_LEVEL=7 ./docker-volume-cp <docker_volume> <docker_volume_copied>
 
 
 ### Parse commandline options
@@ -21,13 +21,14 @@
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
-  -f --from      {source} The docker volume to copy. Required.
-  -t --to        {target} The target docker volume to copy into. Required.
-  -o --overwrite          Overwrite the target volume if it already exists. 
-  -h --help               This page.
-  -v                      Enable verbose mode, print script as it is executed.
-  -d --debug              Enables debug mode.
-  -n --no-color           Disable color output.
+  -o --overwrite  Overwrite the target volume if it already exists. 
+  -h --help       This page.
+  -v              Enable verbose mode, print script as it is executed.
+  -d --debug      Enables debug mode.
+  -n --no-color   Disable color output.
+  
+  {source}        The docker volume to copy. Required.
+  {target}        The target docker volume to copy into. Required.
 EOF
 
 # shellcheck disable=SC2015
@@ -43,17 +44,17 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
 ### Validation. Error out if the things required for your script are not present
 ##############################################################################
 
-docker volume inspect "${arg_f:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_f}\" does not exist."
-if [[ "${arg_o:?}" = "0" ]] && docker volume inspect "${arg_t:?}" > /dev/null 2>&1; then
-  help "Target docker volume \"${arg_t}\" already exists."
+docker volume inspect "${arg_source:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_source}\" does not exist."
+if [[ "${arg_o:?}" = "0" ]] && docker volume inspect "${arg_target:?}" > /dev/null 2>&1; then
+  help "Target docker volume \"${arg_target}\" already exists."
 fi
 
 
 ### Runtime
 ##############################################################################
 
-info "Copy from docker volume \"${arg_f}\" into volume \"${arg_t}\"."
+info "Copy from docker volume \"${arg_source}\" into volume \"${arg_target}\"."
 exec_with_debug "docker run --rm" \
-  "--volume \"${arg_f}\":/__src_vol__ --volume \"${arg_t}\":/__dst_vol__ busybox" \
+  "--volume \"${arg_source}\":/__src_vol__ --volume \"${arg_target}\":/__dst_vol__ busybox" \
   "sh -c \"cp -av /__src_vol__/* /__dst_vol__/ &&" \
     "chown \\\$(stat -c %u:%g /__src_vol__) /__dst_vol__ && chmod \\\$(stat -c %a /__src_vol__) /__dst_vol__\"\""
