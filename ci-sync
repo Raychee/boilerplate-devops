@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Sync all the branches in the repo with the remote.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-sync
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+  
+  ...branches    The target branches to sync. Optional.
+                 - For ${BRANCH_NAME_FEATURE}/* branches, pull and then push to remote.
+                 - For ${BRANCH_NAME_RELEASE}/* branches, pull and then push to remote.
+                 - For ${BRANCH_NAME_HOTFIX}/* branches, pull and then push to remote.
+                 - For ${BRANCH_NAME_DEVELOP} branch, pull from the remote.
+                 - For ${BRANCH_NAME_MASTER} branch, pull from the remote.
+                 If not specified at all, defaults to the current branch in addition to 
+                 ${BRANCH_NAME_MASTER} and ${BRANCH_NAME_DEVELOP}. 
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script syncs the repo with the remote ${REMOTE_ORIGIN} by pulling and pushing.
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+### Runtime
+##############################################################################
+
+setup
+
+__branch_names=()
+if is_array arg_branches; then
+  for __branch_name in "${arg_branches[@]}"; do
+    __branch_names+=("${__branch_name}")
+  done
+else
+  __branch_names+=("${BRANCH_NAME_MASTER}" "${BRANCH_NAME_DEVELOP}")
+  if   [[ ${__starting_branch} != "${BRANCH_NAME_MASTER}" && ${__starting_branch} != "${BRANCH_NAME_DEVELOP}" ]]; then
+    __branch_names+=("${__starting_branch}")
+  fi
+fi
+
+for __branch_name in "${__branch_names[@]}"; do
+  if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
+        ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* && ${__branch_name} != "${BRANCH_NAME_MASTER}" && 
+        ${__branch_name} != "${BRANCH_NAME_DEVELOP}" ]]; then
+    error "Branch \"${__branch_name}\" is unrecognizable for sync." \
+          "Please use standard git commands at your own risk."
+    exit_ 1
+  fi
+  if ! is_branch_existing "${__branch_name}"; then
+    error "Branch \"${__branch_name}\" does not exist."
+    exit_ 1
+  fi
+done
+
+__pulled_develop=
+
+for __branch_name in "${__branch_names[@]}"; do
+  info "Sync branch \"${__branch_name}\"."
+
+  if [[ ${__branch_name} = ${BRANCH_NAME_FEATURE}/* ]]; then
+    
+    if [[ -z ${__pulled_develop:-} ]]; then
+      exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+      exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
+      __pulled_develop=1
+    fi
+    exec_with_info git checkout "${__branch_name}"
+    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    exec_with_info git rebase "${BRANCH_NAME_DEVELOP}" || exit_with_error \
+        "It seems there are conflicts during rebase of branch \"${__branch_name}\" onto \"${BRANCH_NAME_DEVELOP}\"." \
+        "Please resolve the conflicts, finish the rebase manually and then retry \"ci-sync\"."
+    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    
+  elif [[ ${__branch_name} = ${BRANCH_NAME_RELEASE}/* ]]; then
+
+    exec_with_info git checkout "${__branch_name}"
+    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+
+  elif [[ ${__branch_name} = ${BRANCH_NAME_HOTFIX}/* ]]; then
+
+    exec_with_info git checkout "${__branch_name}"
+    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+
+  elif [[ ${__branch_name} = "${BRANCH_NAME_MASTER}" ]]; then
+
+    exec_with_info git checkout "${__branch_name}"
+    exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+
+  elif [[ ${__branch_name} = "${BRANCH_NAME_DEVELOP}" ]]; then
+
+    if [[ -n ${__pulled_develop:-} ]]; then
+      info "Branch \"${__branch_name}\" has been synced."
+    else
+      exec_with_info git checkout "${__branch_name}"
+      exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+      __pulled_develop=1
+    fi
+
+  fi
+done
+
+info "Fetch all tags."
+exec_with_info git fetch --tags
+
+exit_

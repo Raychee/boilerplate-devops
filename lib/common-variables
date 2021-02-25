@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Provide common variables for ci-* scripts. 
+#
+# Usage (in other scripts before argument validation and runtime):
+#
+#  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common-variables" 
+#  
+# Based on a template by BASH3 Boilerplate v2.4.1
+# http://bash3boilerplate.sh/#authors
+#
+# The MIT License (MIT)
+# Copyright (c) 2013 Kevin van Zonneveld and contributors
+# You are not obligated to bundle the LICENSE file with your b3bp projects as long
+# as you leave these references intact in the header comments of your source files.
+
+
+### Global Variable Definition
+##############################################################################
+
+PROJECT_VERSION_PREFIX="v"
+PROJECT_VERSION_INIT="0.1.0"
+
+REMOTE_ORIGIN="origin"
+
+BRANCH_NAME_MASTER="master"
+BRANCH_NAME_DEVELOP="develop"
+BRANCH_NAME_FEATURE="feature"
+BRANCH_NAME_RELEASE="release"
+BRANCH_NAME_HOTFIX="hotfix"
