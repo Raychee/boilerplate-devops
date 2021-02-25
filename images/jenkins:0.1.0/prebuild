@@ -25,4 +25,6 @@ if [[ ! -f "docker-${JENKINS_DOCKER_VERSION}.tgz" ]]; then
       -o "docker-${JENKINS_DOCKER_VERSION}.tgz"
 fi
 
-tar -zxvf "docker-${JENKINS_DOCKER_VERSION}.tgz"
+if [[ ! -d "docker" ]]; then
+  tar -zxvf "docker-${JENKINS_DOCKER_VERSION}.tgz"
+fi

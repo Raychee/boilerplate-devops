@@ -1,7 +1,7 @@
 version: "3.8"
 
-x-deploy:
-  docker_compose_only: true
+#x-deploy:
+#  docker_compose_only: true
 
 services:
   jenkins:
@@ -11,9 +11,10 @@ services:
       restart_policy:
         condition: on-failure
         window: 10s
-#      placement:
-#        constraints:
-#          - node.labels.service==logging
+      placement:
+        constraints:
+          - node.role==manager
+#          - node.labels.service==jenkins
     ports:
       - 8080:8080
       - 50000:50000

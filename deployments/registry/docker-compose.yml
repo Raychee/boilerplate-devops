@@ -10,7 +10,7 @@ services:
         window: 10s
 #      placement:
 #        constraints:
-#          - node.labels.service==logging
+#          - node.labels.service==registry
     ports:
       - 5000:5000
     volumes:
