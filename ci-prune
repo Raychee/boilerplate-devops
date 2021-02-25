@@ -51,7 +51,7 @@ info "Prune remote branches."
 exec_with_info git remote prune "${REMOTE_ORIGIN}"
 
 # shellcheck disable=SC2207
-IFS=$'\n' __target_branches=($(git_local_branches_to_prune))
+IFS=$'\n' read -ra __target_branches <<< "$(git_local_branches_to_prune)"
 if is_array __target_branches; then
   info "These local branches will be pruned:" "${__target_branches[@]}"
   for __branch_name in "${__target_branches[@]}"; do
@@ -67,7 +67,6 @@ if is_array __target_branches; then
       __confirm=1
     else
       read -p "Delete branch \"${__branch_name}\" (y/N)? " -n 1 -r
-      echo
       if [[ ${REPLY} =~ ^[yY]$ ]]; then
         __confirm=1
       fi
