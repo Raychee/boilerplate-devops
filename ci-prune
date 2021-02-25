@@ -74,6 +74,10 @@ if is_array __target_branches; then
     fi
     
     if [[ -n "${__confirm:-}" ]]; then
+      __current_branch=$(current_branch_name)
+      if [[ ${__current_branch} = "${__branch_name}" ]]; then
+        exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+      fi
       exec_with_info git branch -D "${__branch_name}"
     fi
   done
