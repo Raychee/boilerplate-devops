@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# Exit on error. Append "|| true" if you expect an error.
+set -o errexit
+# Exit on error inside any functions or subshells.
+set -o errtrace
+# Do not allow use of undefined vars. Use ${VAR:-} to use an undefined VAR
+set -o nounset
+# Catch the error in case mysqldump fails (but gzip succeeds) in `mysqldump |gzip`
+set -o pipefail
+# Turn on traces, useful while debugging but commented out by default
+# set -o xtrace
+
+### Variable Definition
+##############################################################################
+MYSQL_CONNECTOR_VERSION="8.0.23"
+
+
+### Runtime
+##############################################################################
+
+if [[ ! -f "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" ]]; then
+    curl \
+      -L "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" \
+      -o "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz"
+fi
+
+if [[ ! -d "mysql-connector-java" ]]; then
+  mkdir mysql-connector-java
+  tar -zxvf "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" -C mysql-connector-java --strip-components=1
+fi

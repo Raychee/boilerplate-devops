@@ -1,0 +1,31 @@
+version: "3.8"
+
+
+services:
+  jira:
+    image: ${DOCKER_NAMESPACE}/jira:0.1.0
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        window: 10s
+      resources: 
+        limits: 
+          memory: 4096M
+#      placement:
+#        constraints:
+#          - node.labels.service==jira
+    ports:
+      - 9090:8080
+    volumes:
+      - jira:/var/atlassian/application-data/jira
+    networks:
+      - jira
+
+
+volumes:
+  jira:
+
+
+networks:
+  jira:
