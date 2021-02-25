@@ -136,7 +136,7 @@
           不要使用`git commit`（或开发工具里的等价操作）将`add`和`commit`操作合并起来，导致直接提交了commit。
 
     - 运行命令`git cz`（或`cz`）**规范化**提交commit。
-    
+
         - 如果没安装`cz`，请先完成[配置代码提交规范化插件]()步骤。
         - 根据提示步骤一步步填写。
             - `type`：commit的类型，新功能开发选`feat`，bug修复选`fix`，文档更新选`doc`，等等。  
@@ -149,30 +149,31 @@
             - 如果一次提交中包含多种类型（即开发了功能又修复了bug），需要把这些分成**多次提交**。
             - 所有commit信息均采用**中文**填写。
     
-    - 提交commit后，可以将`feature`分支推送到远端保存。  
-      运行命令`ci-sync`即可。
+    - 提交commit后，运行命令`ci-sync`即可将`feature`分支推送到远端保存。
 
 3. `feature`分支开发完成，提交pull request。
 
     - 运行命令`ci-publish feature/STORY-1`（或者在`feature/STORY-1`分支状态下运行`ci-publish`）
       将分支`feature/STORY-1`与`develop`的合并请求提交为pull request到Github。
-      
+
     - 当`feature`分支包含多个commit时，pull request的标题会自动指定为`feature`分支的**第一个**commit的message。
       若不合适，可以以如下形式指定pull request标题和内容：  
       `ci-publish -m '标题' -m '内容' feature/STORY-1`  
       如果只指定一个`-m`参数，则只指定标题，内容默认为空。详情可运行`ci-publish -h`查看命令具体用法。
+        - **注意**：  
+          如果指定标题，请**严格**按照现有其它commit规范撰写。
       
     - 在`ci-publish`中涉及`hub`命令的调用，请先确保[安装Github命令行程序]()步骤已完成。
-    
+
 4. 项目管理员通过浏览器登录Github，审核pull request。
 
     - 审核代码中遇到的问题，撰写相关review意见，给出Approve / Request changes结论。
-    
+
     - 若审核不通过，继续开发并重新审核。
-        - `feature`分支开发者继续在本地进行开发和提交commit。 
+        - `feature`分支开发者继续在本地进行开发和提交commit。
         - 运行`ci-sync`命令将新的分支变更同步到远端。
         - Github上的pull request可以自动识别分支内容的更新，由项目管理员继续进行审核。
-    
+
     - 若审核通过，合并且删除`feature`分支。
         - 点击页面下方`Merge pull request`按钮（或按钮下拉菜单的第一项`Create a merge commit`）。
         - 将merge commit的标题和正文**互换**。Github默认内容不够合理。
@@ -182,7 +183,9 @@
 5. 清理本地分支状态。
 
     - 运行命令`ci-prune`自动检测到已删除的远端`feature`分支，并自动删除对应的本地分支。
-    
+
+    - 运行命令`ci-sync`将`develop`等分支的最新状态同步至本地。
+
 
 
 ### 代码提交模板
