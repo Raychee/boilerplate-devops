@@ -197,4 +197,6 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
   
 fi
 
+__starting_branch=$(current_branch_name)
+
 exit_
