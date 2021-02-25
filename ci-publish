@@ -88,7 +88,7 @@ for __target_branch in "${__target_branches[@]}"; do
   __pull_request_args="--base ${__target_branch} --force"
   if is_array arg_m; then
     for __message in "${arg_m[@]}"; do
-      __pull_request_args="${__pull_request_args:-} --message ${__message}"
+      __pull_request_args="${__pull_request_args:-} --message '${__message//\'/\\\'}'"
     done
   else 
     __pull_request_args="${__pull_request_args:-} --no-edit"
