@@ -70,13 +70,16 @@ if [[ ${arg_y:-} = "1" ]]; then
   __confirm=1
 else
   read -p "Delete branch \"${__branch_name}\" (y/N)? " -n 1 -r
-  echo
   if [[ ${REPLY} =~ ^[yY]$ ]]; then
     __confirm=1
   fi
 fi
 
 if [[ -n "${__confirm:-}" ]]; then
+  __current_branch=$(current_branch_name)
+  if [[ ${__current_branch} = "${__branch_name}" ]]; then
+    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+  fi
   exec_with_info git branch -d "${__branch_name}"
   exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_name}"
 fi
