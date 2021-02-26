@@ -9,7 +9,9 @@
 
 - 配置自动化规则：
 
-    - 创建分支时将`To Do`中关联的卡片移至`In Progress`
+    - 创建feature分支时，将`To Do`中关联的卡片移至`In Progress`。
+
+    - 创建pull request时，将`In Progress`中关联的卡片移至`In review`。
 
 
 ### 部署Jenkins
@@ -21,29 +23,51 @@
 3. 安装插件：
 
     - Github
+        - 对接配置说明：
+      
     - Jira
+        - 对接配置说明：https://plugins.jenkins.io/atlassian-jira-software-cloud/
+    
+4. 配置Jenkins流水线：
 
+    - 当feature分支提交pull request时，跑单元测试、测试环境的e2e测试。
+    
+    - 当develop分支有新commit时（feature分支合并、release分支合并），构建并部署最新develop版本至测试环境。
+    
+    - 当release分支提交pull request时，跑单元测试、预发环境的e2e测试（注意测试过程不要污染线上数据）
+    
+    - 当master分支有新commit时（release分支合并、hotfix分支合并），构建并部署最新发布版本至预发环境。
+    
+    - 当hotfix分支提交pull request时，跑单元测试，可选跑预发环境的e2e测试。
+    
+    - 手动执行，将当前预发环境版本部署至生产环境。
+    
 
-### 安装Github命令行程序（`hub`，不是`git`）
+### 安装Github命令行程序`gh`（不是`git`）
 
-1. 根据页面指示安装`hub`。
+1. 根据页面指示安装`gh`。
 
-    - 安装指引页：https://github.com/github/hub#installation
-    - 主页：https://hub.github.com/
+    - 安装指引页：https://github.com/cli/cli#installation
+    - 主页：https://cli.github.com/manual/
 
-2. 创建一个personal access token从而使用`hub`来登录到Github。
-
-    - 如果未配置登录信息，`hub`运行时会动态提示输入用户名和密码，但流程有bug，是不能用的。详见说明：
-      https://github.com/github/hub/issues/2655
+2. 创建一个personal access token从而使用`gh`来登录到Github。
 
     - 在Github用户`jenkins`个人主页里，依次点击：  
       右上角个人头像 > `Settings` > 左侧`Developer settings` > `Personal access tokens` > 右侧`Generate new token`
 
-    - 勾选所有scope（可根据具体情况去掉一些），点击创建token。
+    - 勾选所有scope（可根据具体情况去掉一些），点击创建token。（保存好token，切勿丢失，**丢失无法找回**！）
 
-    - 保存好token，切勿丢失，丢失无法找回！
+3. 在终端配置`gh`登录信息。
 
-    - 照常使用`hub`命令，在下次它提示输入用户名和密码时，用户名正常填写，密码粘贴为token，即可成功登录。
+    - 运行命令`gh auth login`进入登录流程。
+
+    - 选择`log into Github.com`。
+
+    - 登录方式选择`Paste an authentication token`，将刚创建的token粘贴进去确定。
+
+    - 选择一个喜好的协议，比如`HTTPS`。
+
+    - `Authenticate Git with your Github credentials`选择是，即可成功完成登录。
 
 
 ### 配置代码提交规范化插件
@@ -119,6 +143,9 @@
 6. 在任何Jenkins pipeline中，配置勾选`GitHub hook trigger for GITScm polling`，即可触发在push时的自动构建。
 
 
+## 持续集成
+
+
 ### 项目新特性开发
 
 1. 创建属于自己的`feature`分支。
@@ -148,7 +175,7 @@
         - **注意事项**：
             - 如果一次提交中包含多种类型（即开发了功能又修复了bug），需要把这些分成**多次提交**。
             - 所有commit信息均采用**中文**填写。
-    
+
     - 提交commit后，运行命令`ci-sync`即可将`feature`分支推送到远端保存。
 
 3. `feature`分支开发完成，提交pull request。
@@ -162,8 +189,8 @@
       如果只指定一个`-m`参数，则只指定标题，内容默认为空。详情可运行`ci-publish -h`查看命令具体用法。
         - **注意**：  
           如果指定标题，请**严格**按照现有其它commit规范撰写。
-      
-    - 在`ci-publish`中涉及`hub`命令的调用，请先确保[安装Github命令行程序]()步骤已完成。
+
+    - 在`ci-publish`中涉及`gh`命令的调用，请先确保[安装Github命令行程序gh]()步骤已完成。
 
 4. 项目管理员通过浏览器登录Github，审核pull request。
 
