@@ -25,16 +25,17 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
-  -m --message [message] The pull request message. Can be repeated.
-  -h --help              This page.
-  -v                     Enable verbose mode, print script as it is executed.
-  -d --debug             Enables debug mode.
-  -n --no-color          Disable color output.
+  -t --title    [title] The pull request title.
+  -b --body     [body]  The pull request body.
+  -h --help             This page.
+  -v                    Enable verbose mode, print script as it is executed.
+  -d --debug            Enables debug mode.
+  -n --no-color         Disable color output.
   
-  [branch]               The target branch to publish. Defaults to the current branch.
-                         - For ${BRANCH_NAME_FEATURE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP}. 
-                         - For ${BRANCH_NAME_RELEASE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
-                         - For ${BRANCH_NAME_HOTFIX}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
+  [branch]              The target branch to publish. Defaults to the current branch.
+                        - For ${BRANCH_NAME_FEATURE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP}. 
+                        - For ${BRANCH_NAME_RELEASE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
+                        - For ${BRANCH_NAME_HOTFIX}/* branches, pull request onto ${BRANCH_NAME_DEVELOP} and ${BRANCH_NAME_MASTER}. 
 EOF
 
 # shellcheck disable=SC2015
@@ -85,16 +86,19 @@ for __target_branch in "${__target_branches[@]}"; do
   exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
   
   info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
-  __pull_request_args="--base ${__target_branch} --force"
-  if is_array arg_m; then
-    for __message in "${arg_m[@]}"; do
-      __pull_request_args="${__pull_request_args:-} --message '${__message//\'/\\\'}'"
-    done
+  __pull_request_args="--base ${__target_branch}"
+  if [[ -n "${arg_t}" || -n "${arg_b}" ]]; then
+    if [[ -n "${arg_t}" ]]; then
+      __pull_request_args="${__pull_request_args} --title '${__message//\'/\\\'}'"
+    fi
+    if [[ -n "${arg_b}" ]]; then
+      __pull_request_args="${__pull_request_args} --body '${__message//\'/\\\'}'"
+    fi
   else 
-    __pull_request_args="${__pull_request_args:-} --no-edit"
+    __pull_request_args="${__pull_request_args:-} --fill"
   fi
   exec_with_info git checkout "${__branch_name}"
-  exec_with_info hub pull-request "${__pull_request_args}"
+  exec_with_info gh pr create "${__pull_request_args}"
 done
 
 exit_
