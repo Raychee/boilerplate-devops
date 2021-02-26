@@ -158,8 +158,8 @@ if ! which git >/dev/null 2>&1; then
   exit 2
 fi
 
-if ! which hub >/dev/null 2>&1; then
-  error "Command \"hub\" is not found. Please install it by following the instructions on https://hub.github.com/."
+if ! which gh >/dev/null 2>&1; then
+  error "Command \"gh\" is not found. Please install it by following the instructions on https://github.com/cli/cli#installation."
   exit 2
 fi
 
