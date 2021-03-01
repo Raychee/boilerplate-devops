@@ -69,11 +69,11 @@ for __branch_name in "${__branch_names[@]}"; do
         ${__branch_name} != "${BRANCH_NAME_DEVELOP}" ]]; then
     error "Branch \"${__branch_name}\" is unrecognizable for sync." \
           "Please use standard git commands at your own risk."
-    exit_ 1
+    exit 1
   fi
   if ! is_branch_existing "${__branch_name}"; then
     error "Branch \"${__branch_name}\" does not exist."
-    exit_ 1
+    exit 1
   fi
 done
 
@@ -128,5 +128,3 @@ done
 
 info "Fetch all tags."
 exec_with_info git fetch --tags
-
-exit_

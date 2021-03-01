@@ -110,7 +110,7 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
       else 
         error "It seems the version management is corrupted." \
               "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
-        exit_ 2
+        exit 2
       fi
     else
       __version=$(version_bump minor "${__last_version}")
@@ -127,7 +127,7 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
   
   if is_branch_existing "${BRANCH_NAME_RELEASE}/*"; then
     error "There is already a ${BRANCH_NAME_RELEASE} branch. Please finish or remove it first."
-    exit_ 2
+    exit 2
   elif is_branch_existing "${__branch}"; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
@@ -161,11 +161,11 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
       if [[ -z "${__historical_version}" ]]; then
         notice "It seems this repo is new and have no historical versions." \
                "No need to create a ${BRANCH_NAME_HOTFIX} branch."
-        exit_ 2
+        exit 2
       else 
         error "It seems the version management is corrupted." \
               "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
-        exit_ 2
+        exit 2
       fi
     else
       __version=$(version_bump patch "${__last_version}")
@@ -182,7 +182,7 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
   
   if is_branch_existing "${BRANCH_NAME_HOTFIX}/*"; then
     error "There is already a ${BRANCH_NAME_HOTFIX} branch. Please finish or remove it first."
-    exit_ 2
+    exit 2
   elif is_branch_existing "${__branch}"; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
@@ -198,5 +198,3 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
 fi
 
 __starting_branch=$(current_branch_name)
-
-exit_

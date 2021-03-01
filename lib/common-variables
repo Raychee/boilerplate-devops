@@ -29,3 +29,16 @@ BRANCH_NAME_DEVELOP="develop"
 BRANCH_NAME_FEATURE="feature"
 BRANCH_NAME_RELEASE="release"
 BRANCH_NAME_HOTFIX="hotfix"
+
+
+### Variable Definition
+##############################################################################
+
+NO_COLOR="${NO_COLOR:-}" # true = disable color. otherwise autodetected
+DRY_RUN="${DRY_RUN:-}"
+
+if [[ "${DRY_RUN}" ]]; then
+  LOG_LEVEL="${LOG_LEVEL:-7}"
+else 
+  LOG_LEVEL="${LOG_LEVEL:-6}" # 7 = debug -> 0 = emergency
+fi

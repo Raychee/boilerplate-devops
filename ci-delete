@@ -55,12 +55,12 @@ __branch_name="${arg_branch:?}"
 if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
       ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
   error "Branch \"${__branch_name}\" is not allowed be deleted."
-  exit_ 1
+  exit 1
 fi
 
 if ! is_branch_existing "${__branch_name}"; then
   error "Branch \"${__branch_name}\" does not exist."
-  exit_ 1
+  exit 1
 fi
 
 __confirm=
@@ -83,5 +83,3 @@ if [[ -n "${__confirm:-}" ]]; then
   exec_with_info git branch -d "${__branch_name}"
   exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_name}"
 fi
-
-exit_

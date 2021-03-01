@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+
+# shellcheck source=common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common-variables"
+
+# shellcheck source=common-functions
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common-functions"
+
+
+function is_git_repo() {
+  git rev-parse --git-dir > /dev/null 2>&1
+}
+
+function current_branch_name() {
+  local branch_name
+  branch_name=$(git symbolic-ref -q HEAD)
+  branch_name=${branch_name##refs/heads/}
+  branch_name=${branch_name:-HEAD}
+  echo "$branch_name"
+}
+
+function is_branch_existing() {
+  if [[ -z $1 ]]; then
+    return 1
+  fi
+  local branch_name
+  branch_name=$(git branch --list "$1")
+  [[ -n $branch_name ]]
+}
+
+function is_tag_existing() {
+  git rev-parse "refs/tags/$1" > /dev/null 2>&1
+}
+
+function git_local_branches_to_prune() {
+    git branch --remote --list "${REMOTE_ORIGIN}/*" | \
+      sed -E -e "s/^ *${REMOTE_ORIGIN}\///" -e 's/(\^|\$|\.|\$|\*|\?|\-|\{|\}|\(|\))/\\\1/g' -e 's/(.*)/\^\1\$/' | \
+      grep -E -v -f /dev/fd/0 <(git branch | sed -E 's/^[ \*]+//') || true
+}
+
+function is_version() {
+  local version
+  version=${1:-}
+  [[ $version =~ ^(${PROJECT_VERSION_PREFIX})?[0-9]+\.[0-9]+\.[0-9]+$   ]]
+}
+
+function normalize_version() {
+  local version
+  version=${1:-}
+  if [[ ${version} =~ ^${PROJECT_VERSION_PREFIX}.*$ ]]; then
+    echo "${version}"
+  else
+    echo "${PROJECT_VERSION_PREFIX}${version}"
+  fi
+}
+
+function version_bump() {
+  local version
+  local bump_method
+  local version_fields
+  local version_major
+  local version_minor
+  local version_patch
+  bump_method=${1:-}
+  version=${2:-}
+  if [[ -z "${version}" ]]; then
+    error "No version provided."
+    return 5
+  fi
+  if ! is_version "${version}"; then
+    error "\"${version}\" is not a valid version."
+    return 1
+  fi
+  version="${version#${PROJECT_VERSION_PREFIX}}"
+  IFS='.' read -ra version_fields <<< "${version}"
+  version_major="${version_fields[0]}"
+  version_minor="${version_fields[1]}"
+  version_patch="${version_fields[2]}"
+  if [[ ${bump_method} == "major" ]]; then
+    version_major=$((version_major + 1))
+    version_minor=0
+    version_patch=0
+  elif [[ ${bump_method} == "minor" ]]; then
+    version_minor=$((version_minor + 1))
+    version_patch=0
+  elif [[ ${bump_method} == "patch" ]]; then
+    version_patch=$((version_patch + 1))
+  else
+    error "Unknown version bump method: $bump_method."
+    return 5
+  fi
+  echo "${PROJECT_VERSION_PREFIX}${version_major}.${version_minor}.${version_patch}"
+}

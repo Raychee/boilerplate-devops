@@ -65,5 +65,3 @@ if ! git checkout "${BRANCH_NAME_DEVELOP}" >/dev/null 2>&1 && ! is_branch_existi
 else 
   info "Branch \"${BRANCH_NAME_DEVELOP}\" already exists."
 fi
-
-exit_

@@ -5,6 +5,32 @@
 ## 初始环境准备
 
 
+### 各开发环境定义
+
+- 开发环境`dev`
+    - 只部署db相关组件。
+    - 用于各个开发者开发时调试用。
+    - 环境内的数据可以随意删除、修改。
+
+- 测试环境`test`
+    - 完整的一套部署（服务和db），代码版本对应`develop`分支。
+    - 用于e2e测试、内部人员试用。**注意避免数据污染！**
+        - **数据污染**指自动化测试过程中，由于测试逻辑疏忽或者流程非正常退出，导致测试前后，
+          系统中残留测试时的样本数据，或者删除了部分原系统数据，影响系统本身正常运转。
+    - 环境内数据**不可以**随意删除、修改，仅能在人工试用中，由应用自身管理数据。
+    
+- 预发环境`staging`
+    - 只部署服务相关组件，不部署db。代码版本对应`master`分支最新待发布版本。
+    - 环境内不存储任何数据，所有服务依赖的db直接指向生产环境。
+    - 用于e2e测试、人工测试。**注意避免数据污染！**
+        - 确认在测试环境中运行的所有自动化测试不存在数据污染后，才可以在此环境运行测试。**切记！**
+    
+- 生产环境`production`
+    - 完整的一套部署（服务和db），代码版本对应`master`分支已发布版本。
+  - 用于线上用户直接使用。
+  - 环境内数据**不可以**随意删除、修改，仅能由应用自身管理数据。
+
+
 ### 部署Jira
 
 - 配置自动化规则：
@@ -16,7 +42,7 @@
 
 ### 部署Jenkins
 
-1. 运行命令`./deploy --stack jenkins`将Jenkins部署进docker swarm。
+1. 运行命令`./deploy jenkins`将Jenkins部署进docker swarm。
 
 2. 等待容器启动，并登录对应url进行初始化配置工作。
 
@@ -24,24 +50,24 @@
 
     - Github
         - 对接配置说明：
-      
+
     - Jira
         - 对接配置说明：https://plugins.jenkins.io/atlassian-jira-software-cloud/
-    
+
 4. 配置Jenkins流水线：
 
     - 当feature分支提交pull request时，跑单元测试、测试环境的e2e测试。
-    
+
     - 当develop分支有新commit时（feature分支合并、release分支合并），构建并部署最新develop版本至测试环境。
-    
+
     - 当release分支提交pull request时，跑单元测试、预发环境的e2e测试（注意测试过程不要污染线上数据）
-    
+
     - 当master分支有新commit时（release分支合并、hotfix分支合并），构建并部署最新发布版本至预发环境。
-    
+
     - 当hotfix分支提交pull request时，跑单元测试，可选跑预发环境的e2e测试。
-    
+
     - 手动执行，将当前预发环境版本部署至生产环境。
-    
+
 
 ### 安装Github命令行程序`gh`（不是`git`）
 
@@ -88,15 +114,11 @@
 
 ### 项目初始化
 
-1. 了解并安装`git flow`。
+1. 了解`git flow`工作流。
 
-    - `git flow`的相关材料：
-        - 教程（中文）：http://www.ruanyifeng.com/blog/2015/12/git-workflow.html
-        - 教程（英文）：https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
-        - 理念（英文）：https://nvie.com/posts/a-successful-git-branching-model/
-        - 安装方法：https://github.com/nvie/gitflow/wiki/Installation
-
-    - 安装完成后，确保`git flow`命令能显示出帮助信息。
+    - 教程（中文）：http://www.ruanyifeng.com/blog/2015/12/git-workflow.html
+    - 教程（英文）：https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow
+    - 理念（英文）：https://nvie.com/posts/a-successful-git-branching-model/
 
 2. 初始化一个空项目。
 
@@ -176,34 +198,29 @@
             - 如果一次提交中包含多种类型（即开发了功能又修复了bug），需要把这些分成**多次提交**。
             - 所有commit信息均采用**中文**填写。
 
-    - 提交commit后，运行命令`ci-sync`即可将`feature`分支推送到远端保存。
+    - 提交commit后，可以运行命令`ci-sync`将`feature`分支推送到远端保存。
 
 3. `feature`分支开发完成，提交pull request。
 
-    - 运行命令`ci-publish feature/STORY-1`（或者在`feature/STORY-1`分支状态下运行`ci-publish`）
+    - 运行命令`ci-publish feature/STORY-1`（或者在`feature/STORY-1`分支状态下直接运行`ci-publish`）
       将分支`feature/STORY-1`与`develop`的合并请求提交为pull request到Github。
 
-    - 当`feature`分支包含多个commit时，pull request的标题会自动指定为`feature`分支的**第一个**commit的message。
-      若不合适，可以以如下形式指定pull request标题和内容：  
-      `ci-publish -m '标题' -m '内容' feature/STORY-1`  
-      如果只指定一个`-m`参数，则只指定标题，内容默认为空。详情可运行`ci-publish -h`查看命令具体用法。
-        - **注意**：  
-          如果指定标题，请**严格**按照现有其它commit规范撰写。
-
+    - 确认pull request的标题会自动指定为`feature`分支的名称，内容会将该`feature`分支的commit信息合并。
+        
     - 在`ci-publish`中涉及`gh`命令的调用，请先确保[安装Github命令行程序gh]()步骤已完成。
 
 4. 项目管理员通过浏览器登录Github，审核pull request。
 
     - 审核代码中遇到的问题，撰写相关review意见，给出Approve / Request changes结论。
 
-    - 若审核不通过，继续开发并重新审核。
-        - `feature`分支开发者继续在本地进行开发和提交commit。
-        - 运行`ci-sync`命令将新的分支变更同步到远端。
+    - 若审核不通过，开发者继续开发并重新发起审核。
+        - `feature`分支开发者继续在本地进行开发，并通过步骤2提交commit。
+        - 运行`ci-sync`命令将新的分支变更同步到远端。（无需再进行步骤3的`ci-publish`。）
         - Github上的pull request可以自动识别分支内容的更新，由项目管理员继续进行审核。
 
-    - 若审核通过，合并且删除`feature`分支。
+    - 若审核通过，项目管理员合并且删除`feature`分支。
         - 点击页面下方`Merge pull request`按钮（或按钮下拉菜单的第一项`Create a merge commit`）。
-        - 将merge commit的标题和正文**互换**。Github默认内容不够合理。
+        - merge commit的标题和内容避免擅自修改。
         - 点击`merge`按钮。
         - merge成功后，点击`Delete branch`将`feature`分支删除。
 
@@ -212,6 +229,8 @@
     - 运行命令`ci-prune`自动检测到已删除的远端`feature`分支，并自动删除对应的本地分支。
 
     - 运行命令`ci-sync`将`develop`等分支的最新状态同步至本地。
+    
+    - 注意，如果不运行`ci-prune`而直接运行`ci-sync`，会报错显示"分支不存在"。
 
 
 

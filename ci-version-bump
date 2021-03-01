@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+
+# shellcheck source=lib/ci-common-functions
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common-functions"
+
+
+version_bump "${@}"

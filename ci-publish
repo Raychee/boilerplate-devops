@@ -58,12 +58,12 @@ __branch_name="${arg_branch:-${__starting_branch}}"
 if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
       ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
   error "Branch \"${__branch_name}\" cannot be published."
-  exit_ 1
+  exit 1
 fi
 
 if ! is_branch_existing "${__branch_name}"; then
   error "Branch \"${__branch_name}\" does not exist."
-  exit_ 1
+  exit 1
 fi
 
 __target_branches=()
@@ -100,5 +100,3 @@ for __target_branch in "${__target_branches[@]}"; do
   exec_with_info git checkout "${__branch_name}"
   exec_with_info gh pr create "${__pull_request_args}"
 done
-
-exit_
