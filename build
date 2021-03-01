@@ -71,8 +71,8 @@ fi
 
 if is_array arg_images; then
   for __image_name in "${arg_images[@]}"; do
-    if [[ ! -d "${__dir}/${DIR_IMAGES}/${__image_name}" ]]; then
-      help "Image name ${__image_name} does not exist in folder \"${__dir}/${DIR_IMAGES}\"."
+    if [[ ! -d "${DIR_IMAGES}/${__image_name}" ]]; then
+      help "Image name ${__image_name} does not exist in folder \"${DIR_IMAGES}\"."
     fi
   done
 fi
@@ -86,7 +86,7 @@ if is_array arg_images; then
 else
   __image_names=()
   for __image_dir_path in "${DIR_IMAGES}"/*; do
-    if [[ -d "${__dir}/${__image_dir_path}" ]]; then
+    if [[ -d "${__image_dir_path}" ]]; then
       __image_names+=("${__image_dir_path##*/}")
     fi
   done
@@ -108,8 +108,7 @@ for __image_dir_name in "${__image_names[@]}"; do
     __image_name=${__image_dir_name}
     __image_version=$(get_latest_version_tag)
     if [[ -z "${__image_version}" ]]; then
-      __image_version="$(git rev-parse --verify HEAD)"
-      __image_version="${__image_version:0:8}"
+      __image_version="$(git rev-parse --verify --short HEAD)"
     fi
     __image_version=${__image_version#${PROJECT_VERSION_PREFIX}}
     if [[ -n "${__image_version}" ]]; then
@@ -121,7 +120,7 @@ for __image_dir_name in "${__image_names[@]}"; do
     exit 2
   fi
   __image_tag="${DOCKER_NAMESPACE}/${__image_name}:${__image_version}"
-  __image_dir="${__dir}/${DIR_IMAGES}/${__image_dir_name}"
+  __image_dir="${DIR_IMAGES}/${__image_dir_name}"
   
   if [[ "${arg_f:-}" = "1" ]] || ! is_docker_image_exist "${__image_tag}"; then
     __custom_build_script_path="${__image_dir}/${SCRIPT_PREBUILD_NAME}"

@@ -78,8 +78,8 @@ function is_docker_compose_only() {
 [[ "${arg_stack:-}" ]] || \
   help "Stack name is not provided and cannot be inferred (variable PROJECT_NAME is not defined)."
 
-[[ -d "${__dir}/${DIR_DEPLOYMENTS}/${arg_stack:?}" ]] || 
-  help "Stack name \"${arg_stack:?}\" does not exist in folder \"${__dir}/${DIR_DEPLOYMENTS}\"."
+[[ -d "${DIR_DEPLOYMENTS}/${arg_stack:?}" ]] || 
+  help "Stack name \"${arg_stack:?}\" does not exist in folder \"${DIR_DEPLOYMENTS}\"."
 
 [[ ${arg_stack:?} = "${PROJECT_NAME}" && -z "${PROJECT_ENVIRONMENT:-}" ]] && \
   help "Variable ${__var_project_environment} need to be defined for project stack \"${PROJECT_NAME}\"."
@@ -105,7 +105,7 @@ if [[ ${arg_stack} = "${PROJECT_NAME}" ]]; then
 else 
   __stack="${arg_stack}"
 fi
-__docker_compose_dir="${__dir}/${DIR_DEPLOYMENTS}/${arg_stack}"
+__docker_compose_dir="${DIR_DEPLOYMENTS}/${arg_stack}"
 __docker_compose_file="${__docker_compose_dir}/docker-compose.yml"
 __docker_compose_file_common="${__docker_compose_dir}/docker-compose.common.yml"
 __docker_compose_file_env="${__docker_compose_dir}/docker-compose.${PROJECT_ENVIRONMENT}.yml"
@@ -167,7 +167,7 @@ else
   
   if [[ "${arg_b:?}" = "0" ]]; then
     info "Ensure all the images are built."
-    "${__dir}"/build -a
+    "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/build -a
   fi
   if [[ "${__docker_compose_only}" = "1" ]]; then
     info "Stack ${__stack} is for docker-compose only. Deploy with \"docker-compose up\"."

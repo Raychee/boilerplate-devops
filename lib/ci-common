@@ -55,6 +55,9 @@ function teardown() {
                "Please take care of it at your own risk."
       fi
     fi
+    if [[ "${exit_code}" != "0" ]]; then
+      notice "An error has occurred. Please refer to the output of last several operations."
+    fi
     exit "${exit_code}"
   fi
 }
