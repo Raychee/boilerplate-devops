@@ -8,6 +8,10 @@
 #  LOG_LEVEL=7 ./deploy
 
 
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
 ### Global Variable Definition
 ##############################################################################
 
@@ -28,18 +32,19 @@ PROJECT_NAME="${PROJECT_NAME:-}"
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
-  -s --stack [stack] The stack name to deploy. Default="${PROJECT_NAME}".
-                     The stack name should match one of the directory name inside "${DIR_DEPLOYMENTS}".
-                     If this is the only argument and no others are provided, this script will invoke command 
-                     "docker stack deploy <stack>". 
-  -p --ps            Invoke command "docker stack ps <stack>".
-  -l --services      Invoke command "docker stack services <stack>".
-  -r --rm            Invoke command "docker stack rm <stack>".
-  -b --no-build      Skip image building checks before deploying.
-  -h --help          This page.
-  -v                 Enable verbose mode, print script as it is executed.
-  -d --debug         Enables debug mode.
-  -n --no-color      Disable color output.
+  -p --ps        Invoke command "docker stack ps <stack>".
+  -l --services  Invoke command "docker stack services <stack>".
+  -r --rm        Invoke command "docker stack rm <stack>".
+  -b --no-build  Skip image building checks before deploying.
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+        
+  [stack]        The stack name to deploy. Default="${PROJECT_NAME}".
+                 The stack name should match one of the directory name inside "${DIR_DEPLOYMENTS}".
+                 If this is the only argument and no others are provided, this script will invoke command 
+                 "docker stack deploy <stack>". 
 EOF
 
 # shellcheck disable=SC2015
@@ -67,22 +72,16 @@ function is_docker_compose_only() {
 }
 
 
-### Coerce
-##############################################################################
-
-arg_s="${arg_s:-${PROJECT_NAME}}"
-
-
 ### Validation. Error out if the things required for your script are not present
 ##############################################################################
 
-[[ "${arg_s}" ]] || \
+[[ "${arg_stack:-}" ]] || \
   help "Stack name is not provided and cannot be inferred (variable PROJECT_NAME is not defined)."
 
-[[ -d "${__dir}/${DIR_DEPLOYMENTS}/${arg_s:?}" ]] || 
-  help "Stack name \"${arg_s:?}\" does not exist in folder \"${__dir}/${DIR_DEPLOYMENTS}\"."
+[[ -d "${__dir}/${DIR_DEPLOYMENTS}/${arg_stack:?}" ]] || 
+  help "Stack name \"${arg_stack:?}\" does not exist in folder \"${__dir}/${DIR_DEPLOYMENTS}\"."
 
-[[ ${arg_s:?} = "${PROJECT_NAME}" && -z "${PROJECT_ENVIRONMENT:-}" ]] && \
+[[ ${arg_stack:?} = "${PROJECT_NAME}" && -z "${PROJECT_ENVIRONMENT:-}" ]] && \
   help "Variable ${__var_project_environment} need to be defined for project stack \"${PROJECT_NAME}\"."
 
 if [[ "${PROJECT_ENVIRONMENT:-}" ]]; then
@@ -101,16 +100,16 @@ fi
 ### Runtime
 ##############################################################################
 
-if [[ ${arg_s} = "${PROJECT_NAME}" ]]; then
+if [[ ${arg_stack} = "${PROJECT_NAME}" ]]; then
   __stack="${PROJECT_NAME}_${PROJECT_ENVIRONMENT}"
 else 
-  __stack="${arg_s}"
+  __stack="${arg_stack}"
 fi
-__docker_compose_dir="${__dir}/${DIR_DEPLOYMENTS}/${arg_s}"
+__docker_compose_dir="${__dir}/${DIR_DEPLOYMENTS}/${arg_stack}"
 __docker_compose_file="${__docker_compose_dir}/docker-compose.yml"
 __docker_compose_file_common="${__docker_compose_dir}/docker-compose.common.yml"
 __docker_compose_file_env="${__docker_compose_dir}/docker-compose.${PROJECT_ENVIRONMENT}.yml"
-if [[ ${arg_s} = "${PROJECT_NAME}" ]]; then
+if [[ ${arg_stack} = "${PROJECT_NAME}" ]]; then
   if [[ ! -s "${__docker_compose_file_common}" ]]; then
     error "Docker compose file ${__docker_compose_file_common} is not found."
     exit 1

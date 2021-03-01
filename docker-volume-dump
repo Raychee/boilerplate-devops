@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-dump -f <docker_volume>
+#  LOG_LEVEL=7 ./docker-volume-dump <docker_volume>
 
 
 ### Parse commandline options
@@ -21,13 +21,14 @@
 
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
-  -f --from     {volume} The docker volume name. Required.
-  -t --to       [dir]    The directory path into which the tar file is dumped. Default=".".
-  -z --compress          Dump as a compressed tar file (tar.gz).
-  -h --help              This page.
-  -v                     Enable verbose mode, print script as it is executed.
-  -d --debug             Enables debug mode.
-  -n --no-color          Disable color output.
+  -z --compress  Dump as a compressed tar file (tar.gz).
+  -h --help      This page.
+  -v             Enable verbose mode, print script as it is executed.
+  -d --debug     Enables debug mode.
+  -n --no-color  Disable color output.
+  
+  {volume}       The docker volume name. Required.
+  [dir]          The directory path into which the tar file is dumped. Default=".".
 EOF
 
 # shellcheck disable=SC2015
@@ -42,13 +43,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
 ### Validation. Error out if the things required for your script are not present
 ##############################################################################
 
-docker volume inspect "${arg_f:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_f}\" does not exist."
-[[ -d ${arg_t:?} ]] || help "Target directory ${arg_t} does not exist."
+docker volume inspect "${arg_volume:?}" > /dev/null 2>&1 || help "Docker volume \"${arg_volume}\" does not exist."
+[[ -d ${arg_dir:?} ]] || help "Target directory ${arg_dir} does not exist."
 
-if [[ "${arg_t}" = /* ]]; then
+if [[ "${arg_dir}" = /* ]]; then
   __target_dir=
 else
-  __target_dir=$(cd "$(pwd)/${arg_t}" && pwd)
+  __target_dir=$(cd "$(pwd)/${arg_dir}" && pwd)
 fi
 [[ -d ${__target_dir} ]] || help "Target directory ${__target_dir} does not exist."
 
@@ -57,14 +58,14 @@ fi
 ##############################################################################
 
 if [[ "${arg_z}" = "1" ]]; then
-  __target_file_name="${arg_f}.tar.gz"
+  __target_file_name="${arg_volume}.tar.gz"
   __tar_arg="z"
 else 
-  __target_file_name="${arg_f}.tar"
+  __target_file_name="${arg_volume}.tar"
   __tar_arg=
 fi
 
-info "Dump docker volume \"${arg_f}\" into ${arg_t}/${__target_file_name}."
+info "Dump docker volume \"${arg_volume}\" into ${arg_dir}/${__target_file_name}."
 exec_with_debug docker run --rm \
-  --volume "${arg_f}":/__volume__ --volume "${__target_dir}":/__host_dir__ busybox \
+  --volume "${arg_volume}":/__volume__ --volume "${__target_dir}":/__host_dir__ busybox \
   tar -${__tar_arg}cvf "/__host_dir__/${__target_file_name}" /__volume__

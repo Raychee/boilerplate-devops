@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Provide common functionalities for ci-* scripts.
+#
+# Usage (in other scripts before argument validation and runtime):
+#
+#  source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+#
+# Based on a template by BASH3 Boilerplate v2.4.1
+# http://bash3boilerplate.sh/#authors
+#
+# The MIT License (MIT)
+# Copyright (c) 2013 Kevin van Zonneveld and contributors
+# You are not obligated to bundle the LICENSE file with your b3bp projects as long
+# as you leave these references intact in the header comments of your source files.
+
+
+# shellcheck source=common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common"
+
+### Functions
+##############################################################################
+
+# shellcheck source=ci-common-functions
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ci-common-functions"
+
+function setup() {
+  local s
+  s=$(exec_with_debug git stash)
+  if [[ -n $s && $s != "No local changes to save" && $s != "没有要保存的本地修改"                                                                                                                         ]]; then
+    info "The current working space is stashed and cleaned."
+    __stashed=$(current_branch_name)
+  fi
+  trap "teardown 3" SIGINT SIGTERM
+  trap "teardown" EXIT
+}
+
+function teardown() {
+  local exit_code="${?}"
+  exit_code=${1:-${exit_code}}
+  if [[ -z "${__exiting}" ]]; then
+    __exiting=1
+    __current_branch=$(current_branch_name)
+    if is_branch_existing "${__starting_branch}" && [[ "${__current_branch}" != "${__starting_branch}" ]]; then
+      exec_with_debug git checkout "${__starting_branch}"
+      __current_branch="${__starting_branch}"
+    fi
+    if [[ -n "${__stashed}" ]]; then
+      if [[ "${__stashed}" == "${__current_branch}" ]]; then
+        info "Restore the working space by stash pop."
+        exec_with_debug git stash pop
+      else
+        notice "There is a stash performed on branch \"${__stashed}\" earlier by ci." \
+               "Please take care of it at your own risk."
+      fi
+    fi
+    exit "${exit_code}"
+  fi
+}
+
+function exit_with_error() {
+  exit_code=$?
+  error "$@"
+  exit $exit_code
+}
+
+
+### Variable Definition
+##############################################################################
+
+__stashed=
+__starting_branch=$(current_branch_name)
+__exiting=
+
+
+### Validation. Error out if the things required for your script are not present
+##############################################################################
+
+if ! which git >/dev/null 2>&1; then
+  error "Command \"git\" is not found. Please install it first."
+  exit 2
+fi
+
+if ! which gh >/dev/null 2>&1; then
+  error "Command \"gh\" is not found. Please install it by following the instructions on https://github.com/cli/cli#installation."
+  exit 2
+fi
+
+if ! is_git_repo; then
+  error "This is not a git repo."
+  exit 2
+fi

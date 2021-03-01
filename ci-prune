@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Prunes the local branches whose corresponding remote branches no longer exist.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-prune
+
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -y --yes               Skip confirmation before deletion of the branch.
+  -h --help              This page.
+  -v                     Enable verbose mode, print script as it is executed.
+  -d --debug             Enables debug mode.
+  -n --no-color          Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script prunes (deletes) local supporting branches (${BRANCH_NAME_FEATURE} / ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX})
+ whose corresponding remote branches no longer exist.
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+
+### Runtime
+##############################################################################
+
+setup
+
+info "Prune remote branches."
+exec_with_info git remote prune "${REMOTE_ORIGIN}"
+
+# shellcheck disable=SC2207
+IFS=$'\n' read -ra __target_branches <<< "$(git_local_branches_to_prune)"
+if is_array __target_branches; then
+  info "These local branches will be pruned:" "${__target_branches[@]}"
+  for __branch_name in "${__target_branches[@]}"; do
+    if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
+          ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
+      error "Branch \"${__branch_name}\" is not allowed be deleted."
+      exit 1
+    fi
+    
+    __confirm=
+    if [[ ${arg_y:-} = "1" ]]; then
+      info "Delete local branch \"${__branch_name}\"."
+      __confirm=1
+    else
+      read -p "Delete branch \"${__branch_name}\" (y/N)? " -n 1 -r
+      if [[ ${REPLY} =~ ^[yY]$ ]]; then
+        __confirm=1
+      fi
+    fi
+    
+    if [[ -n "${__confirm:-}" ]]; then
+      __current_branch=$(current_branch_name)
+      if [[ ${__current_branch} = "${__branch_name}" ]]; then
+        exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+      fi
+      exec_with_info git branch -D "${__branch_name}"
+    fi
+  done
+else
+  info "There are no branches to be pruned."
+fi

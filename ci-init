@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Init branches in the repo.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-init
+
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -h --help                   This page.
+  -v                          Enable verbose mode, print script as it is executed.
+  -d --debug                  Enables debug mode.
+  -n --no-color               Disable color output.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script initializes the repo by making sure the following branches exist and 
+ are tracked by remote upstream branches:
+ - ${BRANCH_NAME_MASTER}
+ - ${BRANCH_NAME_DEVELOP}
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+
+### Runtime
+##############################################################################
+
+setup
+
+info "Fetch the latest repo from ${REMOTE_ORIGIN}."
+exec_with_debug git fetch "${REMOTE_ORIGIN}"
+
+if ! git checkout "${BRANCH_NAME_MASTER}" >/dev/null 2>&1 && ! is_branch_existing "${BRANCH_NAME_MASTER}"; then
+  info "Branch \"${BRANCH_NAME_MASTER}\" does not exist and need to be created."
+  exec_with_info git checkout -b "${BRANCH_NAME_MASTER}"
+  exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
+else 
+  info "Branch \"${BRANCH_NAME_MASTER}\" already exists."
+fi
+if ! git checkout "${BRANCH_NAME_DEVELOP}" >/dev/null 2>&1 && ! is_branch_existing "${BRANCH_NAME_DEVELOP}"; then
+  info "Branch \"${BRANCH_NAME_DEVELOP}\" does not exist and need to be created."
+  exec_with_info git checkout -b "${BRANCH_NAME_DEVELOP}" "${BRANCH_NAME_MASTER}"
+  exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
+else 
+  info "Branch \"${BRANCH_NAME_DEVELOP}\" already exists."
+fi

@@ -53,6 +53,7 @@ __invocation="$(printf %q "${__file}")$( (($#)) && printf ' %q' "$@" || true)"
 # Define the environment variables (and their defaults) that this script depends on
 LOG_LEVEL="${LOG_LEVEL:-6}" # 7 = debug -> 0 = emergency
 NO_COLOR="${NO_COLOR:-}"    # true = disable color. otherwise autodetected
+DRY_RUN="${DRY_RUN:-}"
 
 
 ### Functions
@@ -97,6 +98,27 @@ function __b3bp_log () {
   while IFS=$'\n' read -r log_line; do
     echo -e "$(date -u +"%Y-%m-%d %H:%M:%S UTC") ${color}$(printf "[%9s]" "${log_level}")${color_reset} ${log_line}" 1>&2
   done <<< "${@:-}"
+}
+
+function __detect_default() {
+  local default_value
+  local default_regex
+  if [[ "${1}" =~ \ Default= ]]; then
+    # take default
+    default_value="${1##*Default=}"
+    # strip double quotes from default argument
+    default_regex='^"(.*)"\.?$'
+    if [[ "${default_value}" =~ ${default_regex} ]]; then
+      default_value="${BASH_REMATCH[1]}"
+    else
+      # strip single quotes from default argument
+      default_regex="^'(.*)'\.?$"
+      if [[ "${default_value}" =~ ${default_regex} ]]; then
+        default_value="${BASH_REMATCH[1]}"
+      fi
+    fi
+  fi
+  echo "${default_value}"
 }
 
 function emergency () {                                __b3bp_log emergency "${@}"; exit 1; }
@@ -148,7 +170,7 @@ function exec_with_debug() {
 
 # shellcheck disable=SC2015
 [[ "${__usage+x}" ]] || read -r -d '' __usage <<-'EOF' || true # exits non-zero when EOF encountered
-  -f --file  [arg] Filename to process. Required.
+  -f --file  {arg} Filename to process. Required.
   -t --temp  [arg] Location of tempfile. Default="/tmp/bar".
   -1 --one         Do just one thing
   -i --input [arg] File to process. Can be repeated.
@@ -157,6 +179,11 @@ function exec_with_debug() {
   -v               Enable verbose mode, print script as it is executed.
   -d --debug       Enables debug mode.
   -n --no-color    Disable color output.
+  
+  {arg1}           A required positional arg. All required positional args must precede optional ones.
+  [arg2]           An optional positional arg.
+  [arg3]           An optional positional arg. Default="no_value".
+  ...varargs       Optional variable args. This must be put after all other args. 
 EOF
 
 # shellcheck disable=SC2015
@@ -167,7 +194,34 @@ EOF
 EOF
 
 # Translate usage string -> getopts arguments, and set $arg_<flag> defaults
+__b3bp_tmp_pos_opt_required=()
+__b3bp_tmp_pos_opt_optional=()
+__b3bp_tmp_pos_opt_varargs=
 while read -r __b3bp_tmp_line; do
+  
+  if [[ "${__b3bp_tmp_line}" =~ ^\{[0-9a-zA-Z]+\} ]]; then
+    # this line describes a required positional arg
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_line#\{}"
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_pos_opt%%\}*}"
+    __b3bp_tmp_pos_opt_required+=("${__b3bp_tmp_pos_opt}")
+    continue 
+  fi
+  if [[ "${__b3bp_tmp_line}" =~ ^\[[0-9a-zA-Z]+\] ]]; then
+    # this line describes an optional positional arg
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_line#\[}"
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_pos_opt%%]*}"
+    __b3bp_tmp_pos_opt_optional+=("${__b3bp_tmp_pos_opt}")
+    printf -v "arg_${__b3bp_tmp_pos_opt}" '%s' "$(__detect_default "${__b3bp_tmp_line}")"
+    continue
+  fi
+  if [[ "${__b3bp_tmp_line}" =~ ^\.\.\.[0-9a-zA-Z]+ ]]; then
+    # this line describes a required positional arg
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_line#...}"
+    __b3bp_tmp_pos_opt="${__b3bp_tmp_pos_opt%% *}"
+    __b3bp_tmp_pos_opt_varargs="${__b3bp_tmp_pos_opt}"
+    continue
+  fi
+  
   if [[ "${__b3bp_tmp_line}" =~ ^- ]]; then
     # fetch single character version of option string
     __b3bp_tmp_opt="${__b3bp_tmp_line%% *}"
@@ -211,29 +265,16 @@ while read -r __b3bp_tmp_line; do
 
   [[ "${__b3bp_tmp_opt:-}" ]] || continue
 
-  if [[ "${__b3bp_tmp_line}" =~ ^Default= ]] || [[ "${__b3bp_tmp_line}" =~ \.\ *Default= ]]; then
-    # ignore default value if option does not have an argument
-    __b3bp_tmp_varname="__b3bp_tmp_has_arg_${__b3bp_tmp_opt:0:1}"
-    if [[ "${!__b3bp_tmp_varname}" != "0" ]]; then
-      # take default
-      __b3bp_tmp_init="${__b3bp_tmp_line##*Default=}"
-      # strip double quotes from default argument
-      __b3bp_tmp_re='^"(.*)"\.?$'
-      if [[ "${__b3bp_tmp_init}" =~ ${__b3bp_tmp_re} ]]; then
-        __b3bp_tmp_init="${BASH_REMATCH[1]}"
-      else
-        # strip single quotes from default argument
-        __b3bp_tmp_re="^'(.*)'\.?$"
-        if [[ "${__b3bp_tmp_init}" =~ ${__b3bp_tmp_re} ]]; then
-          __b3bp_tmp_init="${BASH_REMATCH[1]}"
-        fi
-      fi
-    fi
-  fi
-
   if [[ "${__b3bp_tmp_line}" =~ ^Required\. ]] || [[ "${__b3bp_tmp_line}" =~ \.\ *Required\. ]]; then
     # remember that this option requires an argument
     printf -v "__b3bp_tmp_has_arg_${__b3bp_tmp_opt:0:1}" '%s' "2"
+  fi
+  
+  # ignore default value if option does not have an argument
+  __b3bp_tmp_varname="__b3bp_tmp_has_arg_${__b3bp_tmp_opt:0:1}"
+  if [[ "${!__b3bp_tmp_varname}" != "0" ]]; then
+    __b3bp_tmp_init_default=$(__detect_default "${__b3bp_tmp_line}")
+    __b3bp_tmp_init=${__b3bp_tmp_init_default:-${__b3bp_tmp_init}}
   fi
 
   # Init var with value unless it is an array / a repeatable
@@ -242,6 +283,10 @@ while read -r __b3bp_tmp_line; do
 done <<< "${__usage:-}"
 
 # run getopts only if options were specified in __usage
+
+set +o nounset # unexpected arguments will cause unbound variables
+               # to be dereferenced
+
 if [[ "${__b3bp_tmp_opts:-}" ]]; then
   # Allow long options like --this
   __b3bp_tmp_opts="${__b3bp_tmp_opts}-:"
@@ -250,8 +295,6 @@ if [[ "${__b3bp_tmp_opts:-}" ]]; then
   OPTIND=1
 
   # start parsing command line
-  set +o nounset # unexpected arguments will cause unbound variables
-                 # to be dereferenced
   # Overwrite $arg_<flag> defaults with the actual CLI options
   while getopts "${__b3bp_tmp_opts}" __b3bp_tmp_opt; do
     [[ "${__b3bp_tmp_opt}" = "?" ]] && help "Invalid use of script: ${*} "
@@ -314,7 +357,6 @@ if [[ "${__b3bp_tmp_opts:-}" ]]; then
       debug "cli arg ${__b3bp_tmp_varname} = (${__b3bp_tmp_default}) -> ${!__b3bp_tmp_varname}"
     fi
   done
-  set -o nounset # no more unbound variable references expected
 
   shift $((OPTIND-1))
 
@@ -322,6 +364,28 @@ if [[ "${__b3bp_tmp_opts:-}" ]]; then
     shift
   fi
 fi
+
+__b3bp_tmp_pos_opt_n="${#}"
+for __b3bp_tmp_pos_opt in "${__b3bp_tmp_pos_opt_required[@]}"; do
+  __b3bp_tmp_varname="arg_${__b3bp_tmp_pos_opt}"
+  printf -v "${__b3bp_tmp_varname}" '%s' "${@:0:1}"
+  shift 1 || true
+done
+for __b3bp_tmp_pos_opt in "${__b3bp_tmp_pos_opt_optional[@]}"; do
+  __b3bp_tmp_varname="arg_${__b3bp_tmp_pos_opt}"
+  __b3bp_tmp_default="${!__b3bp_tmp_varname}"
+  __b3bp_tmp_value="${@:0:1}"
+  __b3bp_tmp_value="${__b3bp_tmp_value:-${__b3bp_tmp_default}}"
+  printf -v "${__b3bp_tmp_varname}" '%s' "${__b3bp_tmp_value}"
+  shift 1 || true
+done
+if [[ -n "${__b3bp_tmp_pos_opt_varargs}" ]]; then
+  __b3bp_tmp_varname="arg_${__b3bp_tmp_pos_opt_varargs}[@]"
+  debug "cli arg ${__b3bp_tmp_varname} append \${@}"
+  declare -a "${__b3bp_tmp_varname}"='("${!__b3bp_tmp_varname}" "${@}")'
+fi
+
+set -o nounset # no more unbound variable references expected
 
 
 ### Automatic validation of required option arguments
@@ -341,6 +405,11 @@ for __b3bp_tmp_varname in ${!__b3bp_tmp_has_arg_*}; do
 
   help "Option -${__b3bp_tmp_opt_short}${__b3bp_tmp_opt_long:-} requires an argument"
 done
+
+
+if [[ ${__b3bp_tmp_pos_opt_n} -lt "${#__b3bp_tmp_pos_opt_required[@]}" ]]; then
+  help "At least ${#__b3bp_tmp_pos_opt_required[@]} positional arguments expected, got ${__b3bp_tmp_pos_opt_n}."
+fi
 
 
 ### Cleanup Environment variables
@@ -420,9 +489,6 @@ fi
 ### Runtime
 ##############################################################################
 
-exec_with_debug "echo haha | less"
-
-
 info "__i_am_main_script: ${__i_am_main_script}"
 info "__file: ${__file}"
 info "__dir: ${__dir}"
@@ -431,6 +497,7 @@ info "OSTYPE: ${OSTYPE}"
 
 info "arg_f: ${arg_f}"
 info "arg_t: ${arg_t}"
+info "arg_1: ${arg_1}"
 info "arg_d: ${arg_d}"
 info "arg_v: ${arg_v}"
 info "arg_h: ${arg_h}"
@@ -454,6 +521,17 @@ elif [[ -n "${arg_x:-}" ]]; then
   info "arg_x: ${arg_x}"
 else
   info "arg_x: 0"
+fi
+
+info "arg_arg1: ${arg_arg1}"
+info "arg_arg2: ${arg_arg2:-}"
+info "arg_arg3: ${arg_arg3}"
+if is_array arg_varargs; then
+  info "arg_varargs:"
+  # shellcheck disable=SC2154
+  for value in "${arg_varargs[@]}"; do
+    info " - ${value}"
+  done
 fi
 
 info "$(echo -e "multiple lines example - line #1\\nmultiple lines example - line #2\\nimagine logging the output of 'ls -al /path/'")"

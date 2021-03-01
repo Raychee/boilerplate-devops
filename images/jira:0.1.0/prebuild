@@ -13,18 +13,19 @@ set -o pipefail
 
 ### Variable Definition
 ##############################################################################
-JENKINS_DOCKER_VERSION="20.10.2"
+MYSQL_CONNECTOR_VERSION="8.0.23"
 
 
 ### Runtime
 ##############################################################################
 
-if [[ ! -f "docker-${JENKINS_DOCKER_VERSION}.tgz" ]]; then
+if [[ ! -f "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" ]]; then
     curl \
-      -L "https://download.docker.com/linux/static/stable/x86_64/docker-${JENKINS_DOCKER_VERSION}.tgz" \
-      -o "docker-${JENKINS_DOCKER_VERSION}.tgz"
+      -L "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" \
+      -o "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz"
 fi
 
-if [[ ! -d "docker" ]]; then
-  tar -zxvf "docker-${JENKINS_DOCKER_VERSION}.tgz"
+if [[ ! -d "mysql-connector-java" ]]; then
+  mkdir mysql-connector-java
+  tar -zxvf "mysql-connector-java-${MYSQL_CONNECTOR_VERSION}.tar.gz" -C mysql-connector-java --strip-components=1
 fi
