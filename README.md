@@ -18,13 +18,13 @@
         - **数据污染**指自动化测试过程中，由于测试逻辑疏忽或者流程非正常退出，导致测试前后，
           系统中残留测试时的样本数据，或者删除了部分原系统数据，影响系统本身正常运转。
     - 环境内数据**不可以**随意删除、修改，仅能在人工试用中，由应用自身管理数据。
-    
+
 - 预发环境`staging`
     - 只部署服务相关组件，不部署db。代码版本对应`master`分支最新待发布版本。
     - 环境内不存储任何数据，所有服务依赖的db直接指向生产环境。
     - 用于e2e测试、人工测试。**注意避免数据污染！**
         - 确认在测试环境中运行的所有自动化测试不存在数据污染后，才可以在此环境运行测试。**切记！**
-    
+
 - 生产环境`production`
     - 完整的一套部署（服务和db），代码版本对应`master`分支已发布版本。
   - 用于线上用户直接使用。
@@ -55,7 +55,7 @@
         - 对于`当前事务`
             - `状态`等于`正在进行`
             - And：比较两个值：`{{pullRequest.sourceBranch}}`以`feature/`开始
-            - And：比较两个值：`{{pullRequest.destinationBranch}}`等于`develop`
+            - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`develop$`
             - Then：将事务转换为`In Review`
     
     - 合并`feature` pull request时，将`In Review`中关联的卡片移至`In Testing`。
@@ -63,7 +63,7 @@
         - 对于`当前事务`
             - `状态`等于`In Review`
             - And：比较两个值：`{{pullRequest.sourceBranch}}`以`feature/`开始
-            - And：比较两个值：`{{pullRequest.destinationBranch}}`等于`develop`
+            - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`develop$`
             - Then：将事务转换为`In Testing`
       
     - 创建`release`分支时，自动创建版本。
@@ -75,7 +75,7 @@
     - 合并`release` pull request时，将`In Testing`中关联的卡片移至`In Staging`。
         - When：已合并拉取请求
         - If：比较两个值：`{{pullRequest.sourceBranch}}`以`release/`开始
-        - And：比较两个值：`{{pullRequest.destinationBranch}}`等于`master`
+        - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`master$`
         - And：比较两个值：`{{pullRequest.sourceBranch.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
         - `状态`等于`In Testing`
         - Then：将事务转换为`In Staging`
@@ -90,7 +90,7 @@
 3. 安装插件：
 
     - Github
-        - 对接配置说明：
+        - 对接配置说明：https://plugins.jenkins.io/github/
 
     - Jira
         - 对接配置说明：https://plugins.jenkins.io/atlassian-jira-software-cloud/
