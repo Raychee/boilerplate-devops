@@ -51,8 +51,8 @@ function teardown() {
         info "Restore the working space by stash pop."
         exec_with_debug git stash pop
       else
-        notice "There is a stash performed on branch \"${__stashed}\" earlier by ci." \
-               "Please take care of it at your own risk."
+        notice "There is a stash performed on branch \"${__stashed}\" earlier by this script," \
+               "but the branch no longer exists. Please take care of it on your own."
       fi
     fi
     if [[ "${exit_code}" != "0" ]]; then
