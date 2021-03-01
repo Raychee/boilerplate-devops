@@ -58,7 +58,7 @@ if is_array __target_branches; then
     if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
           ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
       error "Branch \"${__branch_name}\" is not allowed be deleted."
-      exit_ 1
+      exit 1
     fi
     
     __confirm=
@@ -83,5 +83,3 @@ if is_array __target_branches; then
 else
   info "There are no branches to be pruned."
 fi
-
-exit_
