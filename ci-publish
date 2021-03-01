@@ -80,12 +80,12 @@ exec_with_info git checkout "${__branch_name}"
 exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
 exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}"
 
+__created_pr=
 for __target_branch in "${__target_branches[@]}"; do
   info "Sync branch \"${__target_branch}\"."
   exec_with_info git checkout "${__target_branch}"
   exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
   
-  info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
   __pull_request_args="--base ${__target_branch}"
   if [[ -n "${arg_t}" || -n "${arg_b}" ]]; then
     if [[ -n "${arg_t}" ]]; then
@@ -97,6 +97,18 @@ for __target_branch in "${__target_branches[@]}"; do
   else 
     __pull_request_args="${__pull_request_args:-} --fill"
   fi
+  if git merge-base --is-ancestor "${__branch_name}" "${__target_branch}"; then
+    notice "There are no commits between branch \"${__branch_name}\" and \"${__target_branch}\"." \
+           "Pull request creation is skipped."
+    continue
+  fi
+  __created_pr=1
+  info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
   exec_with_info git checkout "${__branch_name}"
   exec_with_info gh pr create "${__pull_request_args}"
 done
+
+if [[ -z "${__created_pr:-}" ]]; then
+  error "No pull requests are created. Is this expected?"
+  exit 2
+fi
