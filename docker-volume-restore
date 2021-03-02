@@ -22,9 +22,6 @@
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -h --help      This page.
-  -v             Enable verbose mode, print script as it is executed.
-  -d --debug     Enables debug mode.
-  -n --no-color  Disable color output.
   
   {tar_path}     The path to the tar file. Required.
   [volume]       The target docker volume name to restore. Defaults to the name of the tar file (without its ".tar" suffix).

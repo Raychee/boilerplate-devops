@@ -27,9 +27,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
 read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -y --yes               Skip confirmation before deletion of the branch.
   -h --help              This page.
-  -v                     Enable verbose mode, print script as it is executed.
-  -d --debug             Enables debug mode.
-  -n --no-color          Disable color output.
 EOF
 
 # shellcheck disable=SC2015
@@ -50,10 +47,9 @@ setup
 info "Prune remote branches."
 exec_with_info git remote prune "${REMOTE_ORIGIN}"
 
-# shellcheck disable=SC2207
-IFS=$'\n' read -ra __target_branches <<< "$(git_local_branches_to_prune)"
+IFS=$'\n' read -r -d '' -a __target_branches < <(git_local_branches_to_prune && printf '\0')
 if is_array __target_branches; then
-  info "These local branches will be pruned:" "${__target_branches[@]}"
+  info "These ${#__target_branches[@]} local branches will be pruned:" "${__target_branches[@]}"
   for __branch_name in "${__target_branches[@]}"; do
     if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
           ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
@@ -72,7 +68,7 @@ if is_array __target_branches; then
       fi
     fi
     
-    if [[ -n "${__confirm:-}" ]]; then
+    if [[ ${__confirm:-} = "1" ]]; then
       __current_branch=$(current_branch_name)
       if [[ ${__current_branch} = "${__branch_name}" ]]; then
         exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"

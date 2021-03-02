@@ -18,13 +18,13 @@
         - **数据污染**指自动化测试过程中，由于测试逻辑疏忽或者流程非正常退出，导致测试前后，
           系统中残留测试时的样本数据，或者删除了部分原系统数据，影响系统本身正常运转。
     - 环境内数据**不可以**随意删除、修改，仅能在人工试用中，由应用自身管理数据。
-    
+
 - 预发环境`staging`
     - 只部署服务相关组件，不部署db。代码版本对应`master`分支最新待发布版本。
     - 环境内不存储任何数据，所有服务依赖的db直接指向生产环境。
     - 用于e2e测试、人工测试。**注意避免数据污染！**
         - 确认在测试环境中运行的所有自动化测试不存在数据污染后，才可以在此环境运行测试。**切记！**
-    
+
 - 生产环境`production`
     - 完整的一套部署（服务和db），代码版本对应`master`分支已发布版本。
   - 用于线上用户直接使用。
@@ -33,11 +33,52 @@
 
 ### 部署Jira
 
+- 管理工作流：
+    - `To Do`
+    - `In Progress`
+    - `In Review`
+    - `In Testing`
+    - `In Staging`
+    - `Done`
+
 - 配置自动化规则：
 
-    - 创建feature分支时，将`To Do`中关联的卡片移至`In Progress`。
+    - 创建`feature`分支时，将`To Do`中关联的卡片移至`In Progress`。
+        - When：已创建分支
+        - 对于`当前事务`
+            - `状态`等于`待办`
+            - And：比较两个值：`{{branch.name}}`以`feature/`开始
+            - Then：将事务转换为`正在进行`
 
-    - 创建pull request时，将`In Progress`中关联的卡片移至`In review`。
+    - 创建`feature` pull request时，将`In Progress`中关联的卡片移至`In Review`。
+        - When：已创建拉取请求
+        - 对于`当前事务`
+            - `状态`等于`正在进行`
+            - And：比较两个值：`{{pullRequest.sourceBranch}}`以`feature/`开始
+            - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`develop$`
+            - Then：将事务转换为`In Review`
+    
+    - 合并`feature` pull request时，将`In Review`中关联的卡片移至`In Testing`。
+        - When：已合并拉取请求
+        - 对于`当前事务`
+            - `状态`等于`In Review`
+            - And：比较两个值：`{{pullRequest.sourceBranch}}`以`feature/`开始
+            - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`develop$`
+            - Then：将事务转换为`In Testing`
+      
+    - 创建`release`分支时，自动创建版本。
+        - When：已创建分支
+        - 对于`当前事务`
+            - If：比较两个值：`{{branch.name}}`以`release/`开始
+            - Then：创建版本`{{branch.name.substringAfter("/")}}`
+
+    - 合并`release` pull request时，将`In Testing`中关联的卡片移至`In Staging`。
+        - When：已合并拉取请求
+        - If：比较两个值：`{{pullRequest.sourceBranch}}`以`release/`开始
+        - And：比较两个值：`{{pullRequest.destinationBranch}}`包含正则表达式`master$`
+        - And：比较两个值：`{{pullRequest.sourceBranch.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
+        - `状态`等于`In Testing`
+        - Then：将事务转换为`In Staging`
 
 
 ### 部署Jenkins
@@ -49,7 +90,7 @@
 3. 安装插件：
 
     - Github
-        - 对接配置说明：
+        - 对接配置说明：https://plugins.jenkins.io/github/
 
     - Jira
         - 对接配置说明：https://plugins.jenkins.io/atlassian-jira-software-cloud/
@@ -60,7 +101,7 @@
 
     - 当develop分支有新commit时（feature分支合并、release分支合并），构建并部署最新develop版本至测试环境。
 
-    - 当release分支提交pull request时，跑单元测试、预发环境的e2e测试（注意测试过程不要污染线上数据）
+    - 当release分支提交pull request时，跑单元测试、预发环境的e2e测试。**注意测试过程不要污染线上数据！**
 
     - 当master分支有新commit时（release分支合并、hotfix分支合并），构建并部署最新发布版本至预发环境。
 
@@ -205,8 +246,10 @@
     - 运行命令`ci-publish feature/STORY-1`（或者在`feature/STORY-1`分支状态下直接运行`ci-publish`）
       将分支`feature/STORY-1`与`develop`的合并请求提交为pull request到Github。
 
-    - 确认pull request的标题会自动指定为`feature`分支的名称，内容会将该`feature`分支的commit信息合并。
-        
+    - 在Github页面中确认生成的pull request，  
+      其标题应自动指定为`feature`分支的名称，  
+      其内容则应是该`feature`分支的所包括的所有commit标题的集合。
+
     - 在`ci-publish`中涉及`gh`命令的调用，请先确保[安装Github命令行程序gh]()步骤已完成。
 
 4. 项目管理员通过浏览器登录Github，审核pull request。
@@ -220,7 +263,9 @@
 
     - 若审核通过，项目管理员合并且删除`feature`分支。
         - 点击页面下方`Merge pull request`按钮（或按钮下拉菜单的第一项`Create a merge commit`）。
-        - merge commit的标题和内容避免擅自修改。
+        - merge commit的标题自动生成为`Merge pull request #x from ...`，保持不变。
+        - merge commit的正文自动生成为`feature/STORY-1`，将其**替换**为pull request的正文内容（
+          即由所有feature commit的标题组成的项目列表）。
         - 点击`merge`按钮。
         - merge成功后，点击`Delete branch`将`feature`分支删除。
 
@@ -230,9 +275,70 @@
 
     - 运行命令`ci-sync`将`develop`等分支的最新状态同步至本地。
     
-    - 注意，如果不运行`ci-prune`而直接运行`ci-sync`，会报错显示"分支不存在"。
+    - 注意，单独运行`ci-sync`不会删除任何分支，所以如果不运行`ci-prune`，
+      那么下次在本地的`feature`分支上直接运行`ci-sync`，会报错显示"分支不存在"。
 
 
+### 项目版本预发
+
+1. 创建`release`分支。
+
+    - `release`分支的名称应以`release/<版本号>`命名，其中`版本号`指下一个准备发布的版本，如`0.1.0`。
+    
+    - 运行命令`ci-create release`。  
+      命令无需指定版本，此时会根据上一个已发布的版本自动推断，例如上一版是`0.1.0`，那么当前命令会创建分支`release/0.2.0`。  
+      也可以人工指定版本，例如`ci-create release/0.9.5`。除非特别情况，不建议使用。
+
+    - 确认新的`release`分支创建成功，且已同步至远端。  
+      在Jira自动化规则配置好的情况下，可以看到在Jira中自动创建了新的版本。
+      
+2. 编辑分支改动，并根据规范提交commit。（可选）
+
+    - 此步骤中提交的commit应当仅限于更改项目代码中跟发布版本有关的配置信息，不可进行任何功能性和bug修复性质的提交。
+    
+    - 如若提交commit，步骤应与[项目新特性开发]()中的提交commit步骤一致，保持良好规范。
+      
+3. 提交`release`分支的pull request。
+
+    - 运行命令`ci-publish release/0.2.0`（或者在`feature/0.2.0`分支状态下直接运行`ci-publish`）
+      将分支`release/0.2.0`分别与`master`和`develop`合并的请求提交为**2个**pull request到Github。
+      
+        - 注意，如果`release`分支没有任何新commit，就意味着它和当前`develop`分支内容完全一致，
+          那么此时不会创建由`release`合并到`develop`的pull request（也无法创建），
+          最终只会创建1个由`release`合并到`master`的pull request。
+
+   - 在Github页面中确认生成的pull request，  
+     其标题应自动指定为`release`分支的名称，  
+     其内容则应是这次release所包含的所有commit标题的集合。
+
+   - 在`ci-publish`中涉及`gh`命令的调用，请先确保[安装Github命令行程序gh]()步骤已完成。
+
+4. 项目管理员通过浏览器登录Github，审核pull request。
+
+    - 审核代码中遇到的问题，撰写相关review意见，给出Approve / Request changes结论。
+        - **注意**：对于两个pull request的情况，要么**同时通过**，要么**同时拒绝**。不允许结论不一致。
+
+    - 若审核不通过，删除整个`release`分支，**取消发布**。
+        - 运行命令`ci-delete release/0.2.0`分支，将其在本地和远端删除。
+        - 若要重新发布新的版本，请回到步骤1重新开始。
+
+    - 若审核通过，项目管理员合并且删除`release`分支。
+        - 点击页面下方`Merge pull request`按钮（或按钮下拉菜单的第一项`Create a merge commit`）。
+        - merge commit的标题自动生成为`Merge pull request #x from ...`，保持不变。
+        - merge commit的正文自动生成为`release/0.2.0`，将其**替换**为pull request的正文内容（
+          即由所有feature commit的标题组成的项目列表）。
+        - 点击`merge`按钮。
+        - 在两个pull request都merge成功后，点击`Delete branch`将`release`分支删除。
+
+5. 清理本地分支状态。
+
+    - 运行命令`ci-prune`自动检测到已删除的远端`release`分支，并自动删除对应的本地分支。
+
+    - 运行命令`ci-sync`将`master`等分支的最新状态同步至本地。
+
+   - 注意，单独运行`ci-sync`不会删除任何分支，所以如果不运行`ci-prune`，
+     那么下次在本地的`release`分支上直接运行`ci-sync`，会报错显示"分支不存在"。
+    
 
 ### 代码提交模板
 

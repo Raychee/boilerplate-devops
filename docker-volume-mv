@@ -24,9 +24,6 @@ read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -o --overwrite  Overwrite the target volume if it already exists. 
   -r --rm         Remove the source volume when completes. 
   -h --help       This page.
-  -v              Enable verbose mode, print script as it is executed.
-  -d --debug      Enables debug mode.
-  -n --no-color   Disable color output.
   
   {source}        The docker volume to copy. Required.
   {target}        The target docker volume to copy into. Required.

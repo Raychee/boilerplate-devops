@@ -26,9 +26,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
 # shellcheck disable=SC2015
 read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -h --help                   This page.
-  -v                          Enable verbose mode, print script as it is executed.
-  -d --debug                  Enables debug mode.
-  -n --no-color               Disable color output.
 EOF
 
 # shellcheck disable=SC2015

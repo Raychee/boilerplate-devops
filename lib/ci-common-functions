@@ -21,11 +21,13 @@ function current_branch_name() {
 }
 
 function is_branch_existing() {
-  if [[ -z $1 ]]; then
+  local branch
+  branch="${1:-}"
+  if [[ -z "${branch:-}" ]]; then
     return 1
   fi
   local branch_name
-  branch_name=$(git branch --list "$1")
+  branch_name=$(git branch --list "${branch}" | head -n 1)
   [[ -n $branch_name ]]
 }
 
@@ -35,7 +37,7 @@ function is_tag_existing() {
 
 function git_local_branches_to_prune() {
     git branch --remote --list "${REMOTE_ORIGIN}/*" | \
-      sed -E -e "s/^ *${REMOTE_ORIGIN}\///" -e 's/(\^|\$|\.|\$|\*|\?|\-|\{|\}|\(|\))/\\\1/g' -e 's/(.*)/\^\1\$/' | \
+      sed -E -e "s/^[ \*]*${REMOTE_ORIGIN}\///" -e 's/(\^|\$|\.|\$|\*|\?|\-|\{|\}|\(|\))/\\\1/g' -e 's/(.*)/\^\1\$/' | \
       grep -E -v -f /dev/fd/0 <(git branch | sed -E 's/^[ \*]+//') || true
 }
 
@@ -45,14 +47,35 @@ function is_version() {
   [[ $version =~ ^(${PROJECT_VERSION_PREFIX})?[0-9]+\.[0-9]+\.[0-9]+$   ]]
 }
 
-function normalize_version() {
+function validate_version() {
   local version
   version=${1:-}
+  if [[ -z "${version:-}" ]]; then
+    error "No version provided."
+    return 5
+  fi
+  if ! is_version "${version}"; then
+    error "\"${version}\" is not a valid version."
+    return 1
+  fi
+}
+
+function ensure_version_tag() {
+  local version
+  version=${1:-}
+  validate_version "${version}"
   if [[ ${version} =~ ^${PROJECT_VERSION_PREFIX}.*$ ]]; then
     echo "${version}"
   else
     echo "${PROJECT_VERSION_PREFIX}${version}"
   fi
+}
+
+function ensure_pure_version() {
+  local version
+  version=${1:-}
+  validate_version "${version}"
+  echo "${version#${PROJECT_VERSION_PREFIX}}"
 }
 
 function version_bump() {
@@ -64,15 +87,7 @@ function version_bump() {
   local version_patch
   bump_method=${1:-}
   version=${2:-}
-  if [[ -z "${version}" ]]; then
-    error "No version provided."
-    return 5
-  fi
-  if ! is_version "${version}"; then
-    error "\"${version}\" is not a valid version."
-    return 1
-  fi
-  version="${version#${PROJECT_VERSION_PREFIX}}"
+  version="$(ensure_pure_version "${version}")"
   IFS='.' read -ra version_fields <<< "${version}"
   version_major="${version_fields[0]}"
   version_minor="${version_fields[1]}"
@@ -87,8 +102,31 @@ function version_bump() {
   elif [[ ${bump_method} == "patch" ]]; then
     version_patch=$((version_patch + 1))
   else
-    error "Unknown version bump method: $bump_method."
+    error "Unknown version bump method: ${bump_method}."
     return 5
   fi
   echo "${PROJECT_VERSION_PREFIX}${version_major}.${version_minor}.${version_patch}"
+}
+
+function compare_version() {
+  local version1
+  local version1_fields
+  local version2
+  local version2_fields
+  version1="${1:-}"
+  version1="$(ensure_pure_version "${version1}")"
+  IFS='.' read -ra version1_fields <<< "${version1}"
+  version2="${2:-}"
+  version2="$(ensure_pure_version "${version2}")"
+  IFS='.' read -ra version2_fields <<< "${version2}"
+  for field in {0..2}; do
+    if [[ "${version1_fields[${field}]}" -gt "${version2_fields[${field}]}" ]]; then
+      echo "1"
+      return
+    elif [[ "${version1_fields[${field}]}" -lt "${version2_fields[${field}]}" ]]; then
+      echo "-1"
+      return
+    fi
+  done
+  echo "0"
 }

@@ -33,13 +33,10 @@ PROJECT_NAME="${PROJECT_NAME:-}"
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -p --ps        Invoke command "docker stack ps <stack>".
-  -l --services  Invoke command "docker stack services <stack>".
+  -s --services  Invoke command "docker stack services <stack>".
   -r --rm        Invoke command "docker stack rm <stack>".
-  -b --no-build  Skip image building checks before deploying.
+  -n --no-build  Skip image building checks before deploying.
   -h --help      This page.
-  -v             Enable verbose mode, print script as it is executed.
-  -d --debug     Enables debug mode.
-  -n --no-color  Disable color output.
         
   [stack]        The stack name to deploy. Default="${PROJECT_NAME}".
                  The stack name should match one of the directory name inside "${DIR_DEPLOYMENTS}".
@@ -78,8 +75,8 @@ function is_docker_compose_only() {
 [[ "${arg_stack:-}" ]] || \
   help "Stack name is not provided and cannot be inferred (variable PROJECT_NAME is not defined)."
 
-[[ -d "${__dir}/${DIR_DEPLOYMENTS}/${arg_stack:?}" ]] || 
-  help "Stack name \"${arg_stack:?}\" does not exist in folder \"${__dir}/${DIR_DEPLOYMENTS}\"."
+[[ -d "${DIR_DEPLOYMENTS}/${arg_stack:?}" ]] || 
+  help "Stack name \"${arg_stack:?}\" does not exist in folder \"${DIR_DEPLOYMENTS}\"."
 
 [[ ${arg_stack:?} = "${PROJECT_NAME}" && -z "${PROJECT_ENVIRONMENT:-}" ]] && \
   help "Variable ${__var_project_environment} need to be defined for project stack \"${PROJECT_NAME}\"."
@@ -105,7 +102,7 @@ if [[ ${arg_stack} = "${PROJECT_NAME}" ]]; then
 else 
   __stack="${arg_stack}"
 fi
-__docker_compose_dir="${__dir}/${DIR_DEPLOYMENTS}/${arg_stack}"
+__docker_compose_dir="${DIR_DEPLOYMENTS}/${arg_stack}"
 __docker_compose_file="${__docker_compose_dir}/docker-compose.yml"
 __docker_compose_file_common="${__docker_compose_dir}/docker-compose.common.yml"
 __docker_compose_file_env="${__docker_compose_dir}/docker-compose.${PROJECT_ENVIRONMENT}.yml"
@@ -146,7 +143,7 @@ if [[ ${arg_p:?} = "1" ]]; then
     exec_with_debug docker stack ps "${__stack}"
   fi
   
-elif [[ ${arg_l:?} = "1" ]]; then
+elif [[ ${arg_s:?} = "1" ]]; then
   
   if [[ "${__docker_compose_only}" = "1" ]]; then
     exec_with_debug docker-compose "${__docker_compose_args}" ps
@@ -165,9 +162,9 @@ elif [[ ${arg_r:?} = "1" ]]; then
   
 else
   
-  if [[ "${arg_b:?}" = "0" ]]; then
+  if [[ "${arg_n:?}" = "0" ]]; then
     info "Ensure all the images are built."
-    "${__dir}"/build -a
+    "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/build -a
   fi
   if [[ "${__docker_compose_only}" = "1" ]]; then
     info "Stack ${__stack} is for docker-compose only. Deploy with \"docker-compose up\"."
