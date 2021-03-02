@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Release a version for staging and production.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./ci-release
+
+
+# shellcheck source=lib/common-variables
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -b --base        [commit] The commit on which the version is released. Defaults to the latest "${BRANCH_NAME_MASTER}".
+  -u --bump        [bump]   The method for auto-bumping version. Default="minor". 
+                            Must be only one of the following: major, minor, patch.
+  -k --keep-branch          Skip deletion of the ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX} branch, if any.
+  -y --yes                  Skip confirmation before deletion of the ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX} branch, if any.
+  -h --help                 This page.
+
+  [version]                 The target release version to generate. If not provided, infer in the following order:
+                            - the version embedded in the last release branch name, if any.
+                            - the version embedded in the last hotfix branch name, if any.
+                            - auto-bumped version from the last release version tag on ${BRANCH_NAME_MASTER} branch.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script releases a new version of code on ${BRANCH_NAME_MASTER} branch by creating a version tag on the latest commit. 
+ Meanwhile, if there is any merged ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX} branches, delete them.
+EOF
+
+# shellcheck source=lib/ci-common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
+
+
+### Runtime
+##############################################################################
+
+setup
+
+__base="${arg_b:-${BRANCH_NAME_MASTER}}"
+__version="${arg_version:-}"
+__version_bump_method="${arg_u:?}"
+__base_hash="$(git rev-parse --verify "${__base}")"
+__release_branch=
+__hotfix_branch=
+
+if [[ "${__version_bump_method}" != "major" &&
+      "${__version_bump_method}" != "minor" &&
+      "${__version_bump_method}" != "patch" ]]; then
+  help "-u (--bump) must be only one of the following: major, minor, patch."
+fi
+
+info "Sync branch \"${BRANCH_NAME_MASTER}\"."
+exec_with_info git checkout "${BRANCH_NAME_MASTER}"
+exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
+
+if ! git merge-base --is-ancestor "${__base_hash}" "${BRANCH_NAME_MASTER}"; then
+  error "The code base \"${__base}\" is not on ${BRANCH_NAME_MASTER} branch."
+  exit 1
+fi
+
+info "Fetch latest information from remote ${REMOTE_ORIGIN}."
+exec_with_info git fetch
+exec_with_info git fetch --tags
+
+
+__existing_version_tag="$(get_latest_version_tag "${__base_hash}")"
+if [[ -n "${__existing_version_tag:-}" ]]; then
+  error "The code base \"${__base}\" has already been tagged a version: ${__existing_version_tag}."
+  exit 2
+fi
+
+if [[ -z "${__version:-}" ]]; then
+  __release_branch="$(
+    git branch --remote --points-at "${__base_hash}" --list "${REMOTE_ORIGIN}/${BRANCH_NAME_RELEASE}/*" | head -n 1 |
+    sed -E "s/^[ \*]*${REMOTE_ORIGIN}\///"
+  )"
+  __version="$(echo "${__release_branch:-}" | sed -E "s/^[ \*]*${BRANCH_NAME_RELEASE}\///")"
+fi
+if [[ -z "${__version:-}" ]]; then
+  __hotfix_branch="$(
+    git branch --remote --points-at "${__base_hash}" --list "${REMOTE_ORIGIN}/${BRANCH_NAME_HOTFIX}/*" | head -n 1 |
+    sed -E "s/^[ \*]*${REMOTE_ORIGIN}\///"
+  )"
+  __version="$(echo "${__hotfix_branch:-}" | sed -E "s/^[ \*]*${BRANCH_NAME_HOTFIX}\///")"
+fi
+if [[ -z "${__version:-}" ]]; then
+  __last_version_tag="$(git tag --list "${PROJECT_VERSION_PREFIX}*" --sort=-version:refname | head -n 1)"
+  if [[ -z "${__last_version_tag:-}" ]]; then
+    __version="$(ensure_version_tag "${PROJECT_VERSION_INIT}")"
+    notice "It seems this repo is new and have no historical versions. Let's start with ${__version}."
+  else
+    __version="$(version_bump "${__version_bump_method}" "${__last_version_tag}")"
+    info "Version is bumped from ${__last_version_tag} to ${__version}."
+  fi
+fi
+
+info "Release version ${__version} on \"${__base}\"."
+exec_with_info git tag "${__version}" "${__base_hash}"
+exec_with_info git push --tags
+
+if [[ ${arg_k} = "0" ]]; then
+  __branches_to_delete=()
+  if [[ -n "${__release_branch}" ]]; then
+    __branches_to_delete+=("${__release_branch}")
+  fi
+  if [[ -n "${__hotfix_branch}" ]]; then
+    __branches_to_delete+=("${__hotfix_branch}")
+  fi
+  if is_array __branches_to_delete; then
+    for __branch_to_delete in "${__branches_to_delete[@]}"; do
+      __confirm=
+      if [[ ${arg_y} = "1" ]]; then
+        info "Delete branch \"${__branch_to_delete}\"."
+        __confirm=1
+      else
+        read -p "Delete branch \"${__branch_to_delete}\" (y/N)? " -n 1 -r
+        if [[ ${REPLY} =~ ^[yY]$ ]]; then
+          __confirm=1
+        fi
+      fi
+      if [[ ${__confirm:-} = "1" ]]; then
+        if is_branch_existing "${__branch_to_delete}"; then
+          exec_with_info git branch -d "${__branch_to_delete}"
+        fi
+        exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_to_delete}"
+      fi
+    done
+  fi
+fi
