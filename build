@@ -41,9 +41,6 @@ read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -a --all            Build all images inside "${DIR_IMAGES}" folder. Required if -i (--image) is not provided.
   -f --force          Force building the image(s) even if they already exist.
   -h --help           This page.
-  -v                  Enable verbose mode, print script as it is executed.
-  -d --debug          Enables debug mode.
-  -n --no-color       Disable color output.
   
   ...images           Image names to be built. Can be repeated. Required if -a (--all) is not provided.
 EOF
@@ -107,7 +104,7 @@ for __image_dir_name in "${__image_names[@]}"; do
   else
     __image_name=${__image_dir_name}
     __image_version=$(get_latest_version_tag)
-    if [[ -z "${__image_version}" ]]; then
+    if [[ -z "${__image_version:-}" ]]; then
       __image_version="$(git rev-parse --verify --short HEAD)"
     fi
     __image_version=${__image_version#${PROJECT_VERSION_PREFIX}}
@@ -115,7 +112,7 @@ for __image_dir_name in "${__image_names[@]}"; do
       info "The image version of ${__image_name} is inferred as ${__image_version}."
     fi
   fi
-  if [[ -z "${__image_version}" ]]; then
+  if [[ -z "${__image_version:-}" ]]; then
     error "Image version of ${__image_name} cannot be inferred."
     exit 2
   fi

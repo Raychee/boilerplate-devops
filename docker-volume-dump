@@ -23,9 +23,6 @@
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -z --compress  Dump as a compressed tar file (tar.gz).
   -h --help      This page.
-  -v             Enable verbose mode, print script as it is executed.
-  -d --debug     Enables debug mode.
-  -n --no-color  Disable color output.
   
   {volume}       The docker volume name. Required.
   [dir]          The directory path into which the tar file is dumped. Default=".".

@@ -33,13 +33,10 @@ PROJECT_NAME="${PROJECT_NAME:-}"
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -p --ps        Invoke command "docker stack ps <stack>".
-  -l --services  Invoke command "docker stack services <stack>".
+  -s --services  Invoke command "docker stack services <stack>".
   -r --rm        Invoke command "docker stack rm <stack>".
-  -b --no-build  Skip image building checks before deploying.
+  -n --no-build  Skip image building checks before deploying.
   -h --help      This page.
-  -v             Enable verbose mode, print script as it is executed.
-  -d --debug     Enables debug mode.
-  -n --no-color  Disable color output.
         
   [stack]        The stack name to deploy. Default="${PROJECT_NAME}".
                  The stack name should match one of the directory name inside "${DIR_DEPLOYMENTS}".
@@ -146,7 +143,7 @@ if [[ ${arg_p:?} = "1" ]]; then
     exec_with_debug docker stack ps "${__stack}"
   fi
   
-elif [[ ${arg_l:?} = "1" ]]; then
+elif [[ ${arg_s:?} = "1" ]]; then
   
   if [[ "${__docker_compose_only}" = "1" ]]; then
     exec_with_debug docker-compose "${__docker_compose_args}" ps
@@ -165,7 +162,7 @@ elif [[ ${arg_r:?} = "1" ]]; then
   
 else
   
-  if [[ "${arg_b:?}" = "0" ]]; then
+  if [[ "${arg_n:?}" = "0" ]]; then
     info "Ensure all the images are built."
     "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/build -a
   fi

@@ -52,7 +52,7 @@ __invocation="$(printf %q "${__file}")$( (($#)) && printf ' %q' "$@" || true)"
 
 # Define the environment variables (and their defaults) that this script depends on
 LOG_LEVEL="${LOG_LEVEL:-6}" # 7 = debug -> 0 = emergency
-NO_COLOR="${NO_COLOR:-}"    # true = disable color. otherwise autodetected
+NO_COLOR="${NO_COLOR:-}"    # 1 = disable color. otherwise autodetected
 DRY_RUN="${DRY_RUN:-}"
 
 
@@ -85,8 +85,8 @@ function __b3bp_log () {
   local color="${!colorvar:-${color_error}}"
   local color_reset="\\x1b[0m"
 
-  if [[ "${NO_COLOR:-}" = "true" ]] || { [[ "${TERM:-}" != "xterm"* ]] && [[ "${TERM:-}" != "screen"* ]]; } || [[ ! -t 2 ]]; then
-    if [[ "${NO_COLOR:-}" != "false" ]]; then
+  if [[ "${NO_COLOR:-}" = "1" ]] || { [[ "${TERM:-}" != "xterm"* ]] && [[ "${TERM:-}" != "screen"* ]]; } || [[ ! -t 2 ]]; then
+    if [[ "${NO_COLOR:-}" != "0" ]]; then
       # Don't use colors on pipes or non-recognized terminals
       color=""; color_reset=""
     fi
@@ -469,7 +469,7 @@ fi
 
 # no color mode
 if [[ "${arg_n:?}" = "1" ]]; then
-  NO_COLOR="true"
+  NO_COLOR="1"
 fi
 
 # help mode
