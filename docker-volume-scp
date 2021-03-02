@@ -24,9 +24,6 @@ read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -o --overwrite  Overwrite the remote volume if it already exists. 
   -z --compress   Dump as a compressed tar file (tar.gz).
   -h --help       This page.
-  -v              Enable verbose mode, print script as it is executed.
-  -d --debug      Enables debug mode.
-  -n --no-color   Disable color output.
   
   {source}        The local docker volume. Required.
   {remote}        The remote host address compatible with ssh. Required.

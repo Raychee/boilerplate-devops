@@ -25,9 +25,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
 # shellcheck disable=SC2015
 read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -h --help      This page.
-  -v             Enable verbose mode, print script as it is executed.
-  -d --debug     Enables debug mode.
-  -n --no-color  Disable color output.
   
   {branch}       Target branch to create. Required. Must be like one of the following:
                  - ${BRANCH_NAME_FEATURE}/<name>, e.g. "${BRANCH_NAME_FEATURE}/TASK-1" 
@@ -102,14 +99,14 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
     exec_with_info git pull
     
     __last_version=$(get_latest_version_tag)
-    if [[ -z "${__last_version}" ]]; then
+    if [[ -z "${__last_version:-}" ]]; then
       __historical_version=$(git tag --list "${PROJECT_VERSION_PREFIX}*" | head -n 1)
-      if [[ -z "${__historical_version}" ]]; then
-        notice "It seems this repo is new and have no historical versions. Let's start with ${PROJECT_VERSION_INIT}."
-        __version="${PROJECT_VERSION_INIT}"
+      if [[ -z "${__historical_version:-}" ]]; then
+        __version="$(ensure_version_tag "${PROJECT_VERSION_INIT}")"
+        notice "It seems this repo is new and have no historical versions. Let's start with ${__version}."
       else 
-        error "It seems the version management is corrupted." \
-              "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
+        error "It seems there are unreleased commits on branch \"${BRANCH_NAME_MASTER}\"." \
+              "Please ci-release them first, so that the latest branch \"${BRANCH_NAME_MASTER}\" has a version tag."
         exit 2
       fi
     else
@@ -156,9 +153,9 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
     __pulled_master=1
     
     __last_version=$(get_latest_version_tag)
-    if [[ -z "${__last_version}" ]]; then
+    if [[ -z "${__last_version:-}" ]]; then
       __historical_version=$(git tag --list "${PROJECT_VERSION_PREFIX}*" | head -n 1)
-      if [[ -z "${__historical_version}" ]]; then
+      if [[ -z "${__historical_version:-}" ]]; then
         notice "It seems this repo is new and have no historical versions." \
                "No need to create a ${BRANCH_NAME_HOTFIX} branch."
         exit 2

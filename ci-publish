@@ -28,9 +28,6 @@ read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -t --title    [title] The pull request title.
   -b --body     [body]  The pull request body.
   -h --help             This page.
-  -v                    Enable verbose mode, print script as it is executed.
-  -d --debug            Enables debug mode.
-  -n --no-color         Disable color output.
   
   [branch]              The target branch to publish. Defaults to the current branch.
                         - For ${BRANCH_NAME_FEATURE}/* branches, pull request onto ${BRANCH_NAME_DEVELOP}. 

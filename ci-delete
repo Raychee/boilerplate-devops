@@ -27,9 +27,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"
 read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -y --yes               Skip confirmation before deletion of the branch.
   -h --help              This page.
-  -v                     Enable verbose mode, print script as it is executed.
-  -d --debug             Enables debug mode.
-  -n --no-color          Disable color output.
   
   {branch}               The target branch to delete. Required.
 EOF
@@ -75,7 +72,7 @@ else
   fi
 fi
 
-if [[ -n "${__confirm:-}" ]]; then
+if [[ "${__confirm:-}" = "1" ]]; then
   __current_branch=$(current_branch_name)
   if [[ ${__current_branch} = "${__branch_name}" ]]; then
     exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"

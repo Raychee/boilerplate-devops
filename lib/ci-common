@@ -39,7 +39,7 @@ function setup() {
 function teardown() {
   local exit_code="${?}"
   exit_code=${1:-${exit_code}}
-  if [[ -z "${__exiting}" ]]; then
+  if [[ -z "${__exiting:-}" ]]; then
     __exiting=1
     __current_branch=$(current_branch_name)
     if is_branch_existing "${__starting_branch}" && [[ "${__current_branch}" != "${__starting_branch}" ]]; then

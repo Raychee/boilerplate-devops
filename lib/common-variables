@@ -34,7 +34,9 @@ BRANCH_NAME_HOTFIX="hotfix"
 ### Variable Definition
 ##############################################################################
 
-NO_COLOR="${NO_COLOR:-}" # true = disable color. otherwise autodetected
+VERBOSE_MODE="${VERBOSE_MODE:-}"
+DEBUG_MODE="${DEBUG_MODE:-}"
+NO_COLOR="${NO_COLOR:-}"
 DRY_RUN="${DRY_RUN:-}"
 
 if [[ "${DRY_RUN}" ]]; then

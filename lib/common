@@ -100,9 +100,6 @@ function __detect_default() {
 # shellcheck disable=SC2015
 [[ "${__usage+x}" ]] || read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -h --help         This page.
-  -v                Enable verbose mode, print script as it is executed.
-  -d --debug        Enables debug mode.
-  -n --no-color     Disable color output
 EOF
 
 # shellcheck disable=SC2015
@@ -352,11 +349,11 @@ __b3bp_err_report() {
 # trap '__b3bp_err_report "${FUNCNAME:-.}" ${LINENO}' ERR
 
 
-### Command-line argument switches (like -d for debugmode, -h for showing helppage)
+### Command-line argument switches (like -h for showing help page)
 ##############################################################################
 
 # debug mode
-if [[ "${arg_d:?}" = "1" ]]; then
+if [[ "${DEBUG_MODE:-}" = "1" ]]; then
   set -o xtrace
   PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
   LOG_LEVEL="7"
@@ -365,13 +362,8 @@ if [[ "${arg_d:?}" = "1" ]]; then
 fi
 
 # verbose mode
-if [[ "${arg_v:?}" = "1" ]]; then
+if [[ "${VERBOSE_MODE:-}" = "1" ]]; then
   set -o verbose
-fi
-
-# no color mode
-if [[ "${arg_n:?}" = "1" ]]; then
-  NO_COLOR="true"
 fi
 
 # help mode
