@@ -112,7 +112,9 @@ for __target_branch in "${__target_branches[@]}"; do
   info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
   exec_with_info git checkout "${__branch_name}"
   info gh pr create --base "${__target_branch}" --title "${__title}"
-  gh pr create --base "${__target_branch}" --title "${__title}" --body "${__body}"
+  if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
+    gh pr create --base "${__target_branch}" --title "${__title}" --body "${__body}"
+  fi
 done
 
 if [[ -z "${__created_pr:-}" ]]; then

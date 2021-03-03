@@ -41,25 +41,24 @@ function teardown() {
   exit_code=${1:-${exit_code}}
   if [[ -z "${__exiting:-}" ]]; then
     __exiting=1
-    __current_branch="$(current_branch_name)"
-    if [[ -n "${__stashed}" ]]; then
-      if [[ "${__stashed}" != "${__current_branch}" ]]; then
-        if is_branch_existing "${__stashed}"; then
-          exec_with_debug git checkout "${__stashed}"
-          __current_branch="${__stashed}"
-        else 
-          notice "There is a stash performed on branch \"${__stashed}\" earlier by this script," \
-                 "but the branch no longer exists. Please take care of it on your own."
-        fi
-      fi
-      if [[ "${__stashed}" = "${__current_branch}" ]]; then
-        info "Restore the working space by stash pop."
-        exec_with_debug git stash pop
-      fi
-    fi
+    __current_branch=$(current_branch_name)
     if is_branch_existing "${__starting_branch}" && [[ "${__current_branch}" != "${__starting_branch}" ]]; then
       exec_with_debug git checkout "${__starting_branch}"
       __current_branch="${__starting_branch}"
+    fi
+    if [[ -n "${__stashed}" ]]; then
+      if [[ "${__stashed}" == "${__current_branch}" ]]; then
+        info "Restore the working space by stash pop."
+        exec_with_debug git stash pop
+      else
+        if is_branch_existing "${__stashed}"; then
+          __reason="the current branch is \"${__current_branch}\""
+        else 
+          __reason="the branch no longer exists"
+        fi
+        notice "There is a stash performed on branch \"${__stashed}\" earlier by this script," \
+               "but ${__reason}. Please take care of it on your own."
+      fi
     fi
     if [[ "${exit_code}" != "0" ]]; then
       notice "An error has occurred. Please refer to the output of last several operations."

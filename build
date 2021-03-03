@@ -129,7 +129,7 @@ for __image_dir_name in "${__image_names[@]}"; do
     info "Build image: ${__image_name}:${__image_version}"
     exec_with_debug docker build -t "${__image_tag}" "${__image_dir}"
     exec_with_debug docker push "${__image_tag}"
-  else  
+  else
     info "Image ${__image_tag} already exists."
   fi
   
