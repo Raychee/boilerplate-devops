@@ -125,6 +125,9 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
   if is_branch_existing "${BRANCH_NAME_RELEASE}/*"; then
     error "There is already a ${BRANCH_NAME_RELEASE} branch. Please finish or remove it first."
     exit 2
+  elif is_branch_existing "${BRANCH_NAME_HOTFIX}/*"; then
+    error "There is already a ${BRANCH_NAME_HOTFIX} branch. Please finish or remove it first."
+    exit 2
   elif is_branch_existing "${__branch}"; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
@@ -179,6 +182,9 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
   
   if is_branch_existing "${BRANCH_NAME_HOTFIX}/*"; then
     error "There is already a ${BRANCH_NAME_HOTFIX} branch. Please finish or remove it first."
+    exit 2
+  elif is_branch_existing "${BRANCH_NAME_RELEASE}/*"; then
+    error "There is already a ${BRANCH_NAME_RELEASE} branch. Please finish or remove it first."
     exit 2
   elif is_branch_existing "${__branch}"; then
     notice "Branch \"${__branch}\" already exists."
