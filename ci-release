@@ -32,7 +32,7 @@ read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
   -y --yes                  Skip confirmation before deletion of the ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX} branch, if any.
   -h --help                 This page.
 
-  [version]                 The target release version to generate. If not provided, infer in the following order:
+  [version]                 The target release version to generate. If not provided, infer from the following order:
                             - the version embedded in the last release branch name, if any.
                             - the version embedded in the last hotfix branch name, if any.
                             - auto-bumped version from the last release version tag on ${BRANCH_NAME_MASTER} branch.
@@ -87,18 +87,12 @@ if [[ -n "${__existing_version_tag:-}" ]]; then
 fi
 
 if [[ -z "${__version:-}" ]]; then
-  __release_branch="$(
-    git branch --remote --points-at "${__base_hash}" --list "${REMOTE_ORIGIN}/${BRANCH_NAME_RELEASE}/*" | head -n 1 |
-    sed -E "s/^[ \*]*${REMOTE_ORIGIN}\///"
-  )"
-  __version="$(echo "${__release_branch:-}" | sed -E "s/^[ \*]*${BRANCH_NAME_RELEASE}\///")"
+  __release_branch="$(git_direct_ancestor_branch "${BRANCH_NAME_RELEASE}" "${__base_hash}")"
+  __version="$(echo "${__release_branch:-}" | sed -E "s/^${BRANCH_NAME_RELEASE}\///")"
 fi
 if [[ -z "${__version:-}" ]]; then
-  __hotfix_branch="$(
-    git branch --remote --points-at "${__base_hash}" --list "${REMOTE_ORIGIN}/${BRANCH_NAME_HOTFIX}/*" | head -n 1 |
-    sed -E "s/^[ \*]*${REMOTE_ORIGIN}\///"
-  )"
-  __version="$(echo "${__hotfix_branch:-}" | sed -E "s/^[ \*]*${BRANCH_NAME_HOTFIX}\///")"
+  __hotfix_branch="$(git_direct_ancestor_branch "${BRANCH_NAME_HOTFIX}" "${__base_hash}")"
+  __version="$(echo "${__hotfix_branch:-}" | sed -E "s/^${BRANCH_NAME_HOTFIX}\///")"
 fi
 if [[ -z "${__version:-}" ]]; then
   __last_version_tag="$(git tag --list "${PROJECT_VERSION_PREFIX}*" --sort=-version:refname | head -n 1)"
@@ -131,6 +125,7 @@ if [[ ${arg_k} = "0" ]]; then
         __confirm=1
       else
         read -p "Delete branch \"${__branch_to_delete}\" (y/N)? " -n 1 -r
+        echo
         if [[ ${REPLY} =~ ^[yY]$ ]]; then
           __confirm=1
         fi
