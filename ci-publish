@@ -52,14 +52,14 @@ setup
 
 __branch_name="${arg_branch:-${__starting_branch}}"
 
-if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
-      ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
-  error "Branch \"${__branch_name}\" cannot be published."
+if ! is_branch_existing "${__branch_name}"; then
+  error "Branch \"${__branch_name}\" does not exist."
   exit 1
 fi
 
-if ! is_branch_existing "${__branch_name}"; then
-  error "Branch \"${__branch_name}\" does not exist."
+if [[ ${__branch_name} != ${BRANCH_NAME_FEATURE}/* && ${__branch_name} != ${BRANCH_NAME_RELEASE}/* && 
+      ${__branch_name} != ${BRANCH_NAME_HOTFIX}/* ]]; then
+  error "Branch \"${__branch_name}\" cannot be published."
   exit 1
 fi
 
@@ -83,26 +83,36 @@ for __target_branch in "${__target_branches[@]}"; do
   exec_with_info git checkout "${__target_branch}"
   exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
   
-  __pull_request_args="--base ${__target_branch}"
-  if [[ -n "${arg_t}" || -n "${arg_b}" ]]; then
-    if [[ -n "${arg_t}" ]]; then
-      __pull_request_args="${__pull_request_args} --title '${__message//\'/\\\'}'"
-    fi
-    if [[ -n "${arg_b}" ]]; then
-      __pull_request_args="${__pull_request_args} --body '${__message//\'/\\\'}'"
-    fi
-  else 
-    __pull_request_args="${__pull_request_args:-} --fill"
-  fi
   if git merge-base --is-ancestor "${__branch_name}" "${__target_branch}"; then
     notice "There are no commits between branch \"${__branch_name}\" and \"${__target_branch}\"." \
            "Pull request creation is skipped."
     continue
   fi
+  
+  __title="${arg_t:-}"
+  __body="${arg_b:-}"
+  __default_body="$(
+    git rev-list --no-merges --oneline --reverse "${__target_branch}..${__branch_name}" | sed -E "s/^[0-9a-f]* +//"
+  )"
+  if [[ -z "${__title:-}" ]]; then
+    IFS=$'\n' read -r -d '' -a __jira_issue_keys < <(
+      echo "${__default_body}" | sed -E "s/^[a-z]+: ([A-Z]+\\-[0-9]+) .*$/\\1/" | uniq && printf '\0'
+    )
+    if is_array __jira_issue_keys; then
+      IFS=$' ' __title="${__jira_issue_keys[*]}"
+    else
+      __title="${__branch_name}"
+    fi
+  fi
+  if [[ -z "${__body:-}" ]]; then
+    __body="${__default_body:-${__branch_name}}"
+  fi
+  
   __created_pr=1
   info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
   exec_with_info git checkout "${__branch_name}"
-  exec_with_info gh pr create "${__pull_request_args}"
+  info gh pr create --base "${__target_branch}" --title "${__title}"
+  gh pr create --base "${__target_branch}" --title "${__title}" --body "${__body}"
 done
 
 if [[ -z "${__created_pr:-}" ]]; then
