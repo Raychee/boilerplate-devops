@@ -94,9 +94,12 @@
         - And：比较两个值：`{{pullRequest.sourceBranch.name.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
         - `状态`等于`In Staging`
         - Then：将事务转换为`Done`
+        - And：相关事务条件：`版本中已修复的任务`全部匹配JQL`status = Done`
+        - Then：发布版本`{{issue.fixVersions.name}}`
 
     - 当一个版本关联的所有卡片状态都为`Done`时，发布这个版本。
-        - When：事务已转换：`In Staging`>`Done`
+        - When：事务已转换
+        - `状态`等于`Done`
         - If：`修复版本`非空
         - And：相关事务条件：`版本中已修复的任务`全部匹配JQL`status = Done`
         - Then：发布版本`{{issue.fixVersions.name}}`
