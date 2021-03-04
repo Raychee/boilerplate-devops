@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./ci-sync
+#  LOG_LEVEL=7 ci-sync
 
 # shellcheck source=lib/common-variables
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common-variables"

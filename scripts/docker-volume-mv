@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-mv <source_docker_volume> <target_docker_volume>
+#  LOG_LEVEL=7 docker-volume-mv <source_docker_volume> <target_docker_volume>
 
 
 ### Parse commandline options

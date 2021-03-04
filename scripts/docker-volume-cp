@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-cp <docker_volume> <docker_volume_copied>
+#  LOG_LEVEL=7 docker-volume-cp <docker_volume> <docker_volume_copied>
 
 
 ### Parse commandline options

@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./ci-release
+#  LOG_LEVEL=7 ci-release
 
 
 # shellcheck source=lib/common-variables
