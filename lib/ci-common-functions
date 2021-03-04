@@ -64,6 +64,12 @@ function git_direct_ancestor_hash() {
     grep -f /dev/fd/0 <(git rev-parse "${base}^@") || true
 }
 
+function github_prs_for_branch() {
+  local branch_name
+  branch_name=${1:?}
+  gh pr list --state open --limit 100 | grep "\t${branch_name}\t" | sed -E "s/^([0-9]+)\t.*$/\\1/"
+}
+
 function is_version() {
   local version
   version=${1:-}
