@@ -34,7 +34,7 @@ EOF
 # shellcheck disable=SC2015
 read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
  This script deletes a supporting branch (${BRANCH_NAME_FEATURE} / ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX})
- both locally and remotely. In addition, if there is any pull requests about the branch, they will be closed too. 
+ both locally and remotely. In addition, if there are any pull requests about the branch, they will be closed too. 
  
  This is a dangerous operation. Please use with care!
 EOF
