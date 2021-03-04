@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./deploy
+#  LOG_LEVEL=7 deploy
 
 
 # shellcheck source=lib/common-variables

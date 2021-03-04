@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./main.sh -f /tmp/x -d (change this for your script)
+#  LOG_LEVEL=7 main.sh -f /tmp/x -d (change this for your script)
 #
 # Based on a template by BASH3 Boilerplate v2.4.1
 # http://bash3boilerplate.sh/#authors

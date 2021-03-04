@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Install the devops commands inside scripts/ folder.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 ./install
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -h --help                   This page.
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script installs all of the devops commands inside "scripts" folder, 
+ by appending the rc file of the current shell with "export \$PATH=<scripts folder path>:\$PATH".
+EOF
+
+# shellcheck source=scripts/lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/lib/common"
+
+
+### Functions
+##############################################################################
+
+function info_and_append() {
+  local content
+  local output
+  content="${1:-}"
+  output="${2:?}"
+  info "${content}"
+  echo "${content}" >> "${output}"
+}
+
+
+### Runtime
+##############################################################################
+
+if [[ "${SHELL##*/}" = "bash" ]]; then
+  __rcfile=".bashrc"
+elif [[ "${SHELL##*/}" = "zsh" ]]; then
+  __rcfile=".zshrc"
+else
+  error "Cannot detect the type of the current shell from the \$SHELL variable."
+  exit 1
+fi
+
+info "Install the devops commands by appending the following snippet to the file ${HOME}/${__rcfile}."
+info_and_append "" "${HOME}/${__rcfile}"
+info_and_append "# The following line is auto-added for devops operations." "${HOME}/${__rcfile}"
+info_and_append "export PATH=\"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts:\${PATH}\"" "${HOME}/${__rcfile}"
+info_and_append "" "${HOME}/${__rcfile}"
+
+info "The commands will be available, either by starting another fresh shell," \
+     "or by executing the following command in the current one:"
+info ""
+info "  source \"${HOME}/${__rcfile}\""
+info ""
+info "Installation completes. "

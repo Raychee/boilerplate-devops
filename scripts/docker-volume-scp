@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-scp <local_docker_volume> <remote_docker_volume>
+#  LOG_LEVEL=7 docker-volume-scp <local_docker_volume> <remote_docker_volume>
 
 
 ### Parse commandline options

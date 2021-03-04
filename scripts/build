@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./build -i jenkins:0.1.0
+#  LOG_LEVEL=7 build -i jenkins:0.1.0
 
 
 # shellcheck source=lib/common-variables
