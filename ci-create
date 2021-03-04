@@ -163,8 +163,8 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
                "No need to create a ${BRANCH_NAME_HOTFIX} branch."
         exit 2
       else 
-        error "It seems the version management is corrupted." \
-              "Please make sure the branch \"${BRANCH_NAME_MASTER}\" has a version tag."
+        error "It seems there is a new version yet to be released." \
+              "Please run ci-release and make sure the latest \"${BRANCH_NAME_MASTER}\" has a version tag."
         exit 2
       fi
     else
