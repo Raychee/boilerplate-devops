@@ -40,6 +40,9 @@
     - `In Testing`
     - `In Staging`
     - `Done`
+    
+    示意图如下：
+    ![工作流示意图](https://github.com/Raychee/boilerplate-devops/blob/master/ci-workflow.png)
 
 - 配置自动化规则：
 
