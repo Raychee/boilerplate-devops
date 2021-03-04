@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-restore ./<docker_volume>.tar
+#  LOG_LEVEL=7 docker-volume-restore ./<docker_volume>.tar
 
 
 ### Parse commandline options

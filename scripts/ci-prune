@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./ci-prune
+#  LOG_LEVEL=7 ci-prune
 
 
 # shellcheck source=lib/common-variables

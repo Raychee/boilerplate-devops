@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # This file:
 #
-#  - Copy a docker volume into another volume. 
+#  - Move a docker volume into another volume. 
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-cp <docker_volume> <docker_volume_copied>
+#  LOG_LEVEL=7 docker-volume-mv <source_docker_volume> <target_docker_volume>
 
 
 ### Parse commandline options
@@ -22,6 +22,7 @@
 # shellcheck disable=SC2015
 read -r -d '' __usage <<-EOF || true # exits non-zero when EOF encountered
   -o --overwrite  Overwrite the target volume if it already exists. 
+  -r --rm         Remove the source volume when completes. 
   -h --help       This page.
   
   {source}        The docker volume to copy. Required.
@@ -30,7 +31,7 @@ EOF
 
 # shellcheck disable=SC2015
 read -r -d '' __helptext <<-EOF || true # exits non-zero when EOF encountered
- This script copies all the files from a docker volume into another volume.
+ This script moves all the files from a docker volume into another volume.
  The target volume specified by -t (--to) must not exist, unless -o (--overwrite) is given. 
 EOF
 
@@ -50,8 +51,11 @@ fi
 ### Runtime
 ##############################################################################
 
-info "Copy from docker volume \"${arg_source}\" into volume \"${arg_target}\"."
+info "Move docker volume \"${arg_source}\" into volume \"${arg_target}\"."
 exec_with_debug "docker run --rm" \
   "--volume \"${arg_source}\":/__src_vol__ --volume \"${arg_target}\":/__dst_vol__ busybox" \
-  "sh -c \"cp -av /__src_vol__/* /__dst_vol__/ &&" \
-    "chown \\\$(stat -c %u:%g /__src_vol__) /__dst_vol__ && chmod \\\$(stat -c %a /__src_vol__) /__dst_vol__\"\""
+  "sh -c \"mv -v /__src_vol__/* /__dst_vol__/ &&" \
+    "chown \\\$(stat -c %u:%g /__src_vol__) /__dst_vol__ && chmod \\\$(stat -c %a /__src_vol__) /__dst_vol__\""
+if [[ "${arg_r}" = "1" ]]; then
+  exec_with_debug docker volume rm "${arg_source}"
+fi

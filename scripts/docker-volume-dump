@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./docker-volume-dump <docker_volume>
+#  LOG_LEVEL=7 docker-volume-dump <docker_volume>
 
 
 ### Parse commandline options

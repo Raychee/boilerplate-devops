@@ -5,7 +5,7 @@
 #
 # Usage:
 #
-#  LOG_LEVEL=7 ./ci-create feature/01
+#  LOG_LEVEL=7 ci-create feature/01
 
 
 # shellcheck source=lib/common-variables
