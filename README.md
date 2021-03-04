@@ -40,12 +40,15 @@
     - `In Testing`
     - `In Staging`
     - `Done`
+    
+    示意图如下：
+    ![工作流示意图](https://github.com/Raychee/boilerplate-devops/blob/master/ci-workflow.png)
 
 - 配置自动化规则：
 
-    - 创建`feature`分支时，将`To Do`中关联的卡片移至`In Progress`。
+    - 创建`feature`/`hotfix`分支时，将`To Do`中关联的卡片移至`In Progress`。
         - When：已创建分支
-        - If：比较两个值：`{{branch.name}}`以`feature/`开始
+        - If：比较两个值：`{{branch.name}}`包含正则表达式`^(feature|hotfix)/`
         - `状态`等于`To Do`
         - Then：将事务转换为`In Progress`
 
@@ -70,38 +73,48 @@
         - `状态`等于`In Review`
         - Then：将事务转换为`In Testing`
       
-    - 创建`release`/`hotfix` pull request时，自动创建版本并关联卡片至版本，将`In Testing`中关联的卡片移至`In Staging`。
+    - 创建`release` pull request时，自动创建版本并关联卡片至版本，将`In Testing`中关联的卡片移至`In Staging`。
         - When：已创建拉取请求
-        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`包含正则表达式`^(release|hotfix)/`
+        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`以`release/`开始
         - And：比较两个值：`{{pullRequest.destinationBranch.name}}`包含正则表达式`master$`
         - Then：创建版本`{{pullRequest.sourceBranch.name.substringAfter("/")}}`
         - And：编辑事务字段`修复版本`为`下一个未发布的版本`
         - `状态`等于`In Testing`
         - Then：将事务转换为`In Staging`
 
-    - 拒绝`release`/`hotfix` pull request时，将`In Staging`中关联的卡片移至`In Testing`。
+    - 创建`hotfix` pull request时，自动创建版本并关联卡片至版本，将`In Progress`中关联的卡片移至`In Staging`。
+        - When：已创建拉取请求
+        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`以`hotfix/`开始
+        - And：比较两个值：`{{pullRequest.destinationBranch.name}}`包含正则表达式`master$`
+        - Then：创建版本`{{pullRequest.sourceBranch.name.substringAfter("/")}}`
+        - And：编辑事务字段`修复版本`为`下一个未发布的版本`
+        - `状态`等于`In Testing`
+        - Then：将事务转换为`In Staging`
+
+    - 拒绝`release` pull request时，将`In Staging`中关联的卡片移至`In Testing`。
         - When：拉取请求被拒绝
-        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`包含正则表达式`^(release|hotfix)/`
+        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`以`release/`开始
         - And：比较两个值：`{{pullRequest.destinationBranch.name}}`包含正则表达式`master$`
         - And：比较两个值：`{{pullRequest.sourceBranch.name.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
         - `状态`等于`In Staging`
         - Then：将事务转换为`In Testing`
 
-    - 合并`release`/`hotfix` pull request时，将`In Staging`中关联的卡片移至`Done`。
+    - 拒绝`hotfix` pull request时，将`In Staging`中关联的卡片移至`In Progress`。
+        - When：拉取请求被拒绝
+        - If：比较两个值：`{{pullRequest.sourceBranch.name}}`以`hotfix/`开始
+        - And：比较两个值：`{{pullRequest.destinationBranch.name}}`包含正则表达式`master$`
+        - And：比较两个值：`{{pullRequest.sourceBranch.name.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
+        - `状态`等于`In Staging`
+        - Then：将事务转换为`In Progress`
+
+    - 合并`release`/`hotfix` pull request时，将`In Staging`中关联的卡片移至`Done`，并发布版本。
         - When：已合并拉取请求
         - If：比较两个值：`{{pullRequest.sourceBranch.name}}`包含正则表达式`^(release|hotfix)/`
         - And：比较两个值：`{{pullRequest.destinationBranch.name}}`包含正则表达式`master$`
         - And：比较两个值：`{{pullRequest.sourceBranch.name.substringAfter("/")}}`等于`{{issue.fixVersions.name}}`
         - `状态`等于`In Staging`
         - Then：将事务转换为`Done`
-        - And：相关事务条件：`版本中已修复的任务`全部匹配JQL`status = Done`
-        - Then：发布版本`{{issue.fixVersions.name}}`
-
-    - 当一个版本关联的所有卡片状态都为`Done`时，发布这个版本。
-        - When：事务已转换
-        - `状态`等于`Done`
-        - If：`修复版本`非空
-        - And：相关事务条件：`版本中已修复的任务`全部匹配JQL`status = Done`
+        - If：JQL事务`fixVersion = {{issue.fixVersions.name}}`全部匹配JQL`status = Done`
         - Then：发布版本`{{issue.fixVersions.name}}`
 
 
