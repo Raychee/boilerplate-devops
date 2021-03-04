@@ -99,7 +99,7 @@ for __target_branch in "${__target_branches[@]}"; do
       echo "${__default_body}" | sed -E "s/^[a-z]+: ([A-Z]+\\-[0-9]+) .*$/\\1/" | uniq && printf '\0'
     )
     if is_array __jira_issue_keys; then
-      IFS=$' ' __title="${__jira_issue_keys[*]}"
+      IFS=$' ' __title="${__branch_name}: ${__jira_issue_keys[*]}"
     else
       __title="${__branch_name}"
     fi

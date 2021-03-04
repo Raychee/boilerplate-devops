@@ -34,7 +34,8 @@ EOF
 # shellcheck disable=SC2015
 read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
  This script deletes a supporting branch (${BRANCH_NAME_FEATURE} / ${BRANCH_NAME_RELEASE} / ${BRANCH_NAME_HOTFIX})
- both locally and remotely.
+ both locally and remotely. In addition, if there are any pull requests about the branch, they will be closed too. 
+ 
  This is a dangerous operation. Please use with care!
 EOF
 
@@ -63,10 +64,10 @@ fi
 __confirm=
 
 if [[ ${arg_y:-} = "1" ]]; then
-  info "Delete branch \"${__branch_name}\"."
+  info "Delete branch \"${__branch_name}\" and close its pull requests, if any."
   __confirm=1
 else
-  read -p "Delete branch \"${__branch_name}\" (y/N)? " -n 1 -r
+  read -p "Delete branch \"${__branch_name}\" and close its pull requests, if any (y/N)? " -n 1 -r
   if [[ ${REPLY} =~ ^[yY]$ ]]; then
     __confirm=1
   fi
@@ -77,6 +78,15 @@ if [[ "${__confirm:-}" = "1" ]]; then
   if [[ ${__current_branch} = "${__branch_name}" ]]; then
     exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
   fi
+  info "Check pull requests of branch \"${__branch_name}\"."
+  IFS=$'\n' read -r -d '' -a __existing_prs < <(github_prs_for_branch "${__branch_name}" && printf '\0')
+  if is_array __existing_prs; then
+    for __pr in "${__existing_prs[@]}"; do
+      info "Close pull request ${__pr}."
+      gh pr close "${__pr}"
+    done
+  fi
+  info "Delete branch \"${__branch_name}\" locally and remotely."
   exec_with_info git branch -d "${__branch_name}"
   exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_name}"
 fi
