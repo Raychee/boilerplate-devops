@@ -2,7 +2,31 @@
 
 ---------------------
 
+## 目录
+
+- [初始环境准备](#%E5%88%9D%E5%A7%8B%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87)
+    - [安装devops系列命令](#%E5%AE%89%E8%A3%85devops%E7%B3%BB%E5%88%97%E5%91%BD%E4%BB%A4)
+    - [各开发环境定义](#%E5%90%84%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83%E5%AE%9A%E4%B9%89)
+    - [部署Jira](#%E9%83%A8%E7%BD%B2jira)
+    - [部署Jenkins](#%E9%83%A8%E7%BD%B2jenkins)
+    - [配置Jenkins与Github自动集成](#%E9%85%8D%E7%BD%AEjenkins%E4%B8%8Egithub%E8%87%AA%E5%8A%A8%E9%9B%86%E6%88%90)
+    - [配置Jenkins与Jira自动集成](#%E9%85%8D%E7%BD%AEjenkins%E4%B8%8Ejira%E8%87%AA%E5%8A%A8%E9%9B%86%E6%88%90)
+    - [安装Github命令行程序`gh`（不是`git`）](#%E5%AE%89%E8%A3%85github%E5%91%BD%E4%BB%A4%E8%A1%8C%E7%A8%8B%E5%BA%8Fgh%E4%B8%8D%E6%98%AFgit)
+    - [配置代码提交规范化插件](#%E9%85%8D%E7%BD%AE%E4%BB%A3%E7%A0%81%E6%8F%90%E4%BA%A4%E8%A7%84%E8%8C%83%E5%8C%96%E6%8F%92%E4%BB%B6)
+    - [项目初始化](#%E9%A1%B9%E7%9B%AE%E5%88%9D%E5%A7%8B%E5%8C%96)
+- [持续集成](#%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90)
+    - [项目新特性开发](#%E9%A1%B9%E7%9B%AE%E6%96%B0%E7%89%B9%E6%80%A7%E5%BC%80%E5%8F%91)
+    - [项目版本发布](#%E9%A1%B9%E7%9B%AE%E7%89%88%E6%9C%AC%E5%8F%91%E5%B8%83)
+    - [紧急修复发布](#%E7%B4%A7%E6%80%A5%E4%BF%AE%E5%A4%8D%E5%8F%91%E5%B8%83)
+
+---------------------
+
 ## 初始环境准备
+
+
+### 安装devops系列命令
+
+- 运行本项目目录中的`install`脚本即可。
 
 
 ### 各开发环境定义
@@ -120,7 +144,7 @@
 
 ### 部署Jenkins
 
-1. 运行命令`./deploy jenkins`将Jenkins部署进docker swarm。
+1. 运行命令`deploy jenkins`将Jenkins部署进docker swarm。
 
     - **注意**：Jenkins需要部署在公网可直接访问的网络中（通过一个公网URL可直接打开Jenkins页面），
       否则无法实现与Github和Jira的自动集成。
@@ -131,11 +155,11 @@
 
     - Github
         - 对接配置说明：https://plugins.jenkins.io/github/
-        - 安装后，请参考对接配置说明，或者下文的[配置Jenkins与Github自动集成]()进行插件合理配置。
+        - 安装后，请参考对接配置说明，或者下文的[配置Jenkins与Github自动集成](#配置jenkins与github自动集成)进行插件合理配置。
 
     - Jira
         - 对接配置说明：https://plugins.jenkins.io/atlassian-jira-software-cloud/
-        - 安装后，根据此对接配置说明，或者下文的[配置Jenkins与Jira自动集成]()，在接下来配置Jenkins流水线时，
+        - 安装后，根据此对接配置说明，或者下文的[配置Jenkins与Jira自动集成](#配置jenkins与jira自动集成)，在接下来配置Jenkins流水线时，
           在合适的位置添加`jiraSendBuildInfo`和`jiraSendDeploymentInfo`命令。
 
 4. 配置Jenkins流水线：
@@ -313,7 +337,7 @@
 
     - 运行命令`git cz`（或`cz`）**规范化**提交commit。
 
-        - 如果没安装`cz`，请先完成[配置代码提交规范化插件]()步骤。
+        - 如果没安装`cz`，请先完成[配置代码提交规范化插件](#配置代码提交规范化插件)步骤。
         - 根据提示步骤一步步填写。
             - `type`：commit的类型，新功能开发选`feat`，bug修复选`fix`，文档更新选`doc`，等等。  
               **注意**：如果一次提交中包含多种类型（即开发了功能又修复了bug），把这些分成**多次提交**。
@@ -385,7 +409,7 @@
 
     - 此步骤中提交的commit应当仅限于更改项目代码中跟发布版本有关的配置信息，不可进行任何功能性和bug修复性质的提交。
 
-    - 如若提交commit，步骤应与[项目新特性开发]()中的提交commit步骤一致，保持良好规范。
+    - 如若提交commit，步骤应与[项目新特性开发](#项目新特性开发)中的提交commit步骤一致，保持良好规范。
 
 3. 提交`release`分支的pull request，测试并发布至预发环境试运行。
 
@@ -437,7 +461,7 @@
 
 ### 紧急修复发布
 
-紧急修复的研发流程与[项目版本发布]()基本一致，不同之处在于：
+紧急修复的研发流程与[项目版本发布](#项目版本发布)基本一致，不同之处在于：
 
 - 创建、同步、发布分支时，原命令中所有`release`的字样改为`hotfix`。如`ci-create hotfix`、`ci-publish hotfix`等。
 
