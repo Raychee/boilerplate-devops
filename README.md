@@ -70,6 +70,17 @@
 
 - 配置自动化规则：
 
+    - 创建`feature`分支时，将`To Do`中关联的卡片移至`In Progress`。
+        - When：已创建分支
+        - If：比较两个值：`{{branch.name}}`包含正则表达式`^(feature|hotfix)/`
+        - `状态`等于`To Do`
+        - Then：将事务转换为`In Progress`
+
+    - 在有新commit时，将`To Do`中关联的卡片移至`In Progress`。
+        - When：已创建提交
+        - `状态`等于`To Do`
+        - Then：将事务转换为`In Progress`
+
     - 创建`feature`/`hotfix`分支时，将`To Do`中关联的卡片移至`In Progress`。
         - When：已创建分支
         - If：比较两个值：`{{branch.name}}`包含正则表达式`^(feature|hotfix)/`
@@ -154,7 +165,7 @@
 3. 安装插件：
 
     - Github
-        - 对接配置说明：https://plugins.jenkins.io/github/
+        - 对接配置说明：https://plugins.jenkins.io/github/。
         - 安装后，请参考对接配置说明，或者下文的[配置Jenkins与Github自动集成](#配置jenkins与github自动集成)进行插件合理配置。
 
     - Jira
