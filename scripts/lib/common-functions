@@ -101,3 +101,20 @@ function get_latest_version_tag() {
   base="${1:-${BRANCH_NAME_MASTER}}"
   git tag --points-at "${base}" --list "${PROJECT_VERSION_PREFIX}*" | head -n 1
 }
+
+function read_confirm() {
+  local message
+  local reply
+  local yes
+  message="${1:-}"
+  yes=1
+  read -p "${message} " -n 1 -r
+  reply="${REPLY}"
+  if [[ ${reply} =~ ^[yY]$ ]]; then
+    yes=0
+  fi
+  if [[ ${reply} != "\n" ]]; then
+    echo
+  fi
+  return "${yes}"
+}

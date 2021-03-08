@@ -61,11 +61,8 @@ if is_array __target_branches; then
     if [[ ${arg_y:-} = "1" ]]; then
       info "Delete local branch \"${__branch_name}\"."
       __confirm=1
-    else
-      read -p "Delete branch \"${__branch_name}\" (y/N)? " -n 1 -r
-      if [[ ${REPLY} =~ ^[yY]$ ]]; then
-        __confirm=1
-      fi
+    elif read_confirm "Delete branch \"${__branch_name}\" (y/N)?"; then
+      __confirm=1
     fi
     
     if [[ ${__confirm:-} = "1" ]]; then
