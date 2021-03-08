@@ -54,11 +54,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
 setup
 
 __base="${arg_b:-${BRANCH_NAME_MASTER}}"
-__version="${arg_version:-}"
 __version_bump_method="${arg_u:?}"
-__base_hash="$(git rev-parse --verify "${__base}")"
-__release_branch=
-__hotfix_branch=
 
 if [[ "${__version_bump_method}" != "major" &&
       "${__version_bump_method}" != "minor" &&
@@ -69,6 +65,11 @@ fi
 info "Sync branch \"${BRANCH_NAME_MASTER}\"."
 exec_with_info git checkout "${BRANCH_NAME_MASTER}"
 exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
+
+__version="${arg_version:-}"
+__base_hash="$(git rev-parse --verify "${__base}")"
+__release_branch=
+__hotfix_branch=
 
 if ! git merge-base --is-ancestor "${__base_hash}" "${BRANCH_NAME_MASTER}"; then
   error "The code base \"${__base}\" is not on ${BRANCH_NAME_MASTER} branch."
