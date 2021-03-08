@@ -66,11 +66,8 @@ __confirm=
 if [[ ${arg_y:-} = "1" ]]; then
   info "Delete branch \"${__branch_name}\" and close its pull requests, if any."
   __confirm=1
-else
-  read -p "Delete branch \"${__branch_name}\" and close its pull requests, if any (y/N)? " -n 1 -r
-  if [[ ${REPLY} =~ ^[yY]$ ]]; then
-    __confirm=1
-  fi
+elif read_confirm "Delete branch \"${__branch_name}\" and close its pull requests, if any (y/N)?"; then
+  __confirm=1
 fi
 
 if [[ "${__confirm:-}" = "1" ]]; then

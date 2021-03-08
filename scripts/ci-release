@@ -123,12 +123,8 @@ if [[ ${arg_k} = "0" ]]; then
       if [[ ${arg_y} = "1" ]]; then
         info "Delete branch \"${__branch_to_delete}\"."
         __confirm=1
-      else
-        read -p "Delete branch \"${__branch_to_delete}\" (y/N)? " -n 1 -r
-        echo
-        if [[ ${REPLY} =~ ^[yY]$ ]]; then
-          __confirm=1
-        fi
+      elif read_confirm "Delete branch \"${__branch_to_delete}\" (y/N)?"; then
+        __confirm=1
       fi
       if [[ ${__confirm:-} = "1" ]]; then
         if is_branch_existing "${__branch_to_delete}"; then
