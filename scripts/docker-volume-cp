@@ -51,7 +51,7 @@ fi
 ##############################################################################
 
 info "Copy from docker volume \"${arg_source}\" into volume \"${arg_target}\"."
-exec_with_debug "docker run --rm" \
+eval_with_debug "docker run --rm" \
   "--volume \"${arg_source}\":/__src_vol__ --volume \"${arg_target}\":/__dst_vol__ busybox" \
   "sh -c \"cp -av /__src_vol__/* /__dst_vol__/ &&" \
     "chown \\\$(stat -c %u:%g /__src_vol__) /__dst_vol__ && chmod \\\$(stat -c %a /__src_vol__) /__dst_vol__\"\""

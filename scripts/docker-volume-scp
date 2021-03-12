@@ -68,13 +68,13 @@ fi
 
 if [[ -z "$(ssh "${arg_remote}" "docker images -q busybox 2> /dev/null")" ]]; then
   info "Remote host doesn't have image \"busybox\" for transfer. Copy the image from local."
-  exec_with_debug docker pull busybox
-  exec_with_debug "docker save busybox | ssh \"${arg_remote}\" \"docker load\""
+  eval_with_debug docker pull busybox
+  eval_with_debug "docker save busybox | ssh \"${arg_remote}\" \"docker load\""
 fi
 
 info "Transfer local docker volume \"${arg_source}\" into volume \"${__target_volume_name}\" on remote host ${arg_remote}."
 # shellcheck disable=SC2029
-exec_with_debug "docker run --rm --volume \"${arg_source}\":/__volume__" \
+eval_with_debug "docker run --rm --volume \"${arg_source}\":/__volume__" \
   "busybox sh -c \"tar -${__tar_arg}cvf - /__volume__\" |" \
   "ssh \"${arg_remote}\" \"docker run --rm --interactive --volume ${__target_volume_name}:/__volume__" \
     "busybox sh -c \\\"tar -${__tar_arg}xf - -C /__volume__ --strip 1\\\"\""

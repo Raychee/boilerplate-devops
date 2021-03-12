@@ -70,26 +70,26 @@ function help () {
   exit 1
 }
 
-function is_array() {
-  [[ -n "${!1:-}" ]] && declare -p "${1}" 2> /dev/null | grep -q '^declare \-a'
+function exit_with_error() {
+  exit_code="${?}"
+  error "${@}"
+  exit "${exit_code}"
 }
 
-function to_upper() {
-  printf '%s\n' "${1}" | awk '{ print toupper($0) }'
-}
-
-function exec_with_debug() {
-  debug "${@}"
+function eval_() {
   if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
     eval "${@}"
   fi
 }
 
-function exec_with_info() {
+function eval_with_debug() {
+  debug "${*}"
+  eval_ "${@}"
+}
+
+function eval_with_info() {
   info "${*}"
-  if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
-    eval "${*}"
-  fi
+  eval_ "${@}"
 }
 
 function is_docker_image_exist() {
@@ -100,6 +100,10 @@ function get_latest_version_tag() {
   local base
   base="${1:-${BRANCH_NAME_MASTER}}"
   git tag --points-at "${base}" --list "${PROJECT_VERSION_PREFIX}*" | head -n 1
+}
+
+function is_array() {
+  [[ -n "${!1:-}" ]] && declare -p "${1}" 2> /dev/null | grep -q '^declare \-a'
 }
 
 function read_confirm() {
@@ -117,4 +121,52 @@ function read_confirm() {
     echo
   fi
   return "${yes}"
+}
+
+function to_upper() {
+  printf '%s\n' "${1}" | awk '{ print toupper($0) }'
+}
+
+function join_by() {
+  local delimiter
+  local first_field
+  delimiter="${1:-}"
+  shift
+  first_field="${1:-}"
+  shift
+  printf %s "${first_field}";
+  if is_array @; then
+    for field in "${@}"; do
+      printf %s "${delimiter}${field}"
+    done
+  fi
+}
+
+function regex_escape_pipe() {
+    sed -r 's/(\^|\$|\.|\$|\*|\?|\-|\{|\}|\(|\))/\\\1/g'
+}
+
+function regex_escape() {
+  local expr
+  expr="${1:-}"
+  echo "${expr}" | regex_escape_pipe
+}
+
+function escape_chars_pipe() {
+  local chars
+  local sed_expr
+  chars="${1:-}"
+  IFS=$'\n' read -r -d '' -a sed_expr_chars < <(
+    echo "${chars}" | grep --only-matching . | regex_escape_pipe && printf '\0'
+  )
+  sed_expr="s/($(join_by "|" "${sed_expr_chars[@]}"))/\\\\\\1/g"
+  sed -r "${sed_expr}"
+}
+
+function escape_chars() {
+  local chars
+  local string
+  chars="${1:-}"
+  string="${2:-}"
+  echo "${string}" | escape_chars_pipe "${chars}"
 }

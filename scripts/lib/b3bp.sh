@@ -149,7 +149,7 @@ function is_array() {
     [[ -n "${!1:-}" ]] && declare -p "${1}" 2> /dev/null | grep -q '^declare \-a'
 }
 
-function exec_with_debug() {
+function eval_with_debug() {
     debug "${*}"
     if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
       eval "${@}"

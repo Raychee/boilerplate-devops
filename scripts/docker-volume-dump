@@ -63,6 +63,6 @@ else
 fi
 
 info "Dump docker volume \"${arg_volume}\" into ${arg_dir}/${__target_file_name}."
-exec_with_debug docker run --rm \
+eval_with_debug docker run --rm \
   --volume "${arg_volume}":/__volume__ --volume "${__target_dir}":/__host_dir__ busybox \
   tar -${__tar_arg}cvf "/__host_dir__/${__target_file_name}" /__volume__

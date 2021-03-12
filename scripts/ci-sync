@@ -82,41 +82,41 @@ for __branch_name in "${__branch_names[@]}"; do
   if [[ ${__branch_name} = ${BRANCH_NAME_FEATURE}/* ]]; then
     
     if [[ -z ${__pulled_develop:-} ]]; then
-      exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
-      exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
+      eval_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+      eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
       __pulled_develop=1
     fi
-    exec_with_info git checkout "${__branch_name}"
-    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
-    exec_with_info git rebase "${BRANCH_NAME_DEVELOP}" || exit_with_error \
+    eval_with_info git checkout "${__branch_name}"
+    eval_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    eval_with_info git rebase "${BRANCH_NAME_DEVELOP}" || exit_with_error \
         "It seems there are conflicts during rebase of branch \"${__branch_name}\" onto \"${BRANCH_NAME_DEVELOP}\"." \
         "Please resolve the conflicts, finish the rebase manually and then retry \"ci-sync\"."
-    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
     
   elif [[ ${__branch_name} = ${BRANCH_NAME_RELEASE}/* ]]; then
 
-    exec_with_info git checkout "${__branch_name}"
-    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
-    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git checkout "${__branch_name}"
+    eval_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
 
   elif [[ ${__branch_name} = ${BRANCH_NAME_HOTFIX}/* ]]; then
 
-    exec_with_info git checkout "${__branch_name}"
-    exec_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
-    exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git checkout "${__branch_name}"
+    eval_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
 
   elif [[ ${__branch_name} = "${BRANCH_NAME_MASTER}" ]]; then
 
-    exec_with_info git checkout "${__branch_name}"
-    exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+    eval_with_info git checkout "${__branch_name}"
+    eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
 
   elif [[ ${__branch_name} = "${BRANCH_NAME_DEVELOP}" ]]; then
 
     if [[ -n ${__pulled_develop:-} ]]; then
       info "Branch \"${__branch_name}\" has been synced."
     else
-      exec_with_info git checkout "${__branch_name}"
-      exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+      eval_with_info git checkout "${__branch_name}"
+      eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
       __pulled_develop=1
     fi
 
@@ -124,4 +124,4 @@ for __branch_name in "${__branch_names[@]}"; do
 done
 
 info "Fetch all tags."
-exec_with_info git fetch --tags
+eval_with_info git fetch --tags

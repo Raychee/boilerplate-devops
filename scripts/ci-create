@@ -68,20 +68,20 @@ if [[ "${arg_branch}" =~ ^${BRANCH_NAME_FEATURE}/ ]]; then
   
   if [[ ${__branch_base} = "${BRANCH_NAME_DEVELOP}" ]]; then
     info "Pull the latest \"${BRANCH_NAME_DEVELOP}\" branch."
-    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
-    exec_with_info git pull
+    eval_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+    eval_with_info git pull
   fi
   
   if is_branch_existing "${__branch}"; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
     notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
-    exec_with_info git checkout "${__branch}"
+    eval_with_info git checkout "${__branch}"
   else
     info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
-    exec_with_info git checkout -b "${__branch}" "${__branch_base}" || \
+    eval_with_info git checkout -b "${__branch}" "${__branch_base}" || \
       exit_with_error "Could not create branch \"${__branch}\"."
-    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+    eval_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
   fi
   
 elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
@@ -95,8 +95,8 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
     info "No ${BRANCH_NAME_RELEASE} version is provided. Version will be inferred by bumping from the last version."
     
     info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
-    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
-    exec_with_info git pull
+    eval_with_info git checkout "${BRANCH_NAME_MASTER}"
+    eval_with_info git pull
     
     __last_version=$(get_latest_version_tag)
     if [[ -z "${__last_version:-}" ]]; then
@@ -118,8 +118,8 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
   
   if [[ ${__branch_base} = "${BRANCH_NAME_DEVELOP}" ]]; then
     info "Pull the latest \"${BRANCH_NAME_DEVELOP}\" branch."
-    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
-    exec_with_info git pull
+    eval_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+    eval_with_info git pull
   fi
   
   if is_branch_existing "${BRANCH_NAME_RELEASE}/*"; then
@@ -132,12 +132,12 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_RELEASE}(/.+)?$ ]]; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
     notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
-    exec_with_info git checkout "${__branch}"
+    eval_with_info git checkout "${__branch}"
   else
     info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
-    exec_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
+    eval_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
       exit_with_error "Could not create branch \"${__branch}\"."
-    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+    eval_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
   fi
   
 elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
@@ -151,8 +151,8 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
     info "No ${BRANCH_NAME_HOTFIX} version is provided. Version will be inferred by bumping from the last version."
     
     info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
-    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
-    exec_with_info git pull
+    eval_with_info git checkout "${BRANCH_NAME_MASTER}"
+    eval_with_info git pull
     __pulled_master=1
     
     __last_version=$(get_latest_version_tag)
@@ -176,8 +176,8 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
   
   if [[ ${__branch_base} = "${BRANCH_NAME_MASTER}" && -z "${__pulled_master:-}" ]]; then
     info "Pull the latest \"${BRANCH_NAME_MASTER}\" branch."
-    exec_with_info git checkout "${BRANCH_NAME_MASTER}"
-    exec_with_info git pull
+    eval_with_info git checkout "${BRANCH_NAME_MASTER}"
+    eval_with_info git pull
   fi
   
   if is_branch_existing "${BRANCH_NAME_HOTFIX}/*"; then
@@ -190,12 +190,12 @@ elif [[ "${arg_branch}" =~ ^${BRANCH_NAME_HOTFIX}(/.+)?$ ]]; then
     notice "Branch \"${__branch}\" already exists."
   elif is_branch_existing "${REMOTE_ORIGIN}/${__branch}"; then
     notice "Remote branch \"${REMOTE_ORIGIN}/${__branch}\" already exists. Checkout into local branch."
-    exec_with_info git checkout "${__branch}"
+    eval_with_info git checkout "${__branch}"
   else
     info "Create branch \"${__branch}\" base on \"${__branch_base}\"."
-    exec_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
+    eval_with_info git checkout -b "${__branch}" "${__branch_base:?}" || \
       exit_with_error "Could not create branch \"${__branch}\"."
-    exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
+    eval_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${__branch}"
   fi
   
 fi

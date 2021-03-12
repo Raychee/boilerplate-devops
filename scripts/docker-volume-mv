@@ -52,10 +52,10 @@ fi
 ##############################################################################
 
 info "Move docker volume \"${arg_source}\" into volume \"${arg_target}\"."
-exec_with_debug "docker run --rm" \
+eval_with_debug "docker run --rm" \
   "--volume \"${arg_source}\":/__src_vol__ --volume \"${arg_target}\":/__dst_vol__ busybox" \
   "sh -c \"mv -v /__src_vol__/* /__dst_vol__/ &&" \
     "chown \\\$(stat -c %u:%g /__src_vol__) /__dst_vol__ && chmod \\\$(stat -c %a /__src_vol__) /__dst_vol__\""
 if [[ "${arg_r}" = "1" ]]; then
-  exec_with_debug docker volume rm "${arg_source}"
+  eval_with_debug docker volume rm "${arg_source}"
 fi

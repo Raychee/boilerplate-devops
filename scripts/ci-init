@@ -46,19 +46,19 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
 setup
 
 info "Fetch the latest repo from ${REMOTE_ORIGIN}."
-exec_with_debug git fetch "${REMOTE_ORIGIN}"
+eval_with_debug git fetch "${REMOTE_ORIGIN}"
 
 if ! git checkout "${BRANCH_NAME_MASTER}" >/dev/null 2>&1 && ! is_branch_existing "${BRANCH_NAME_MASTER}"; then
   info "Branch \"${BRANCH_NAME_MASTER}\" does not exist and need to be created."
-  exec_with_info git checkout -b "${BRANCH_NAME_MASTER}"
-  exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
+  eval_with_info git checkout -b "${BRANCH_NAME_MASTER}"
+  eval_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
 else 
   info "Branch \"${BRANCH_NAME_MASTER}\" already exists."
 fi
 if ! git checkout "${BRANCH_NAME_DEVELOP}" >/dev/null 2>&1 && ! is_branch_existing "${BRANCH_NAME_DEVELOP}"; then
   info "Branch \"${BRANCH_NAME_DEVELOP}\" does not exist and need to be created."
-  exec_with_info git checkout -b "${BRANCH_NAME_DEVELOP}" "${BRANCH_NAME_MASTER}"
-  exec_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
+  eval_with_info git checkout -b "${BRANCH_NAME_DEVELOP}" "${BRANCH_NAME_MASTER}"
+  eval_with_info git push --set-upstream "${REMOTE_ORIGIN}" "${BRANCH_NAME_DEVELOP}"
 else 
   info "Branch \"${BRANCH_NAME_DEVELOP}\" already exists."
 fi
