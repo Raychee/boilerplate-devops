@@ -41,16 +41,32 @@ function git_local_branches_without_origin() {
       grep --extended-regexp -v -f /dev/fd/0 <(git branch | sed -r 's/^[ \*]*//') || true
 }
 
+function git_remote_branch_points_at_commit() {
+    local commit
+    local commit_hash
+    local branch_name
+    commit="${1:?}"
+    commit_hash="$(git rev-parse --verify "${commit}")"
+    while read -r branch_name; do
+      if [[ "${commit_hash}" = "$(git rev-parse --verify "${branch_name}")" ]]; then
+        echo "${branch_name}"
+      fi
+    done < <(
+      git branch --remote --list "${REMOTE_ORIGIN}/*" | \
+        grep -v HEAD | sed -r "s/^[ \*]*${REMOTE_ORIGIN}\///"
+    )
+}
+
 function git_direct_ancestor_branch() {
     local branch_type
     local base
     local release_commit
+    local branch_name
     branch_type="${1:?}"
     base="${2:-${BRANCH_NAME_MASTER}}"
     release_commit="$(git_direct_ancestor_hash "${branch_type}" "${base}" | head -n 1)"
     if [[ -n "${release_commit:-}" ]]; then
-      git branch --remote --points-at "${release_commit}" --list "${REMOTE_ORIGIN}/${branch_type}/*" | \
-        sed -r "s/^[ \*]*${REMOTE_ORIGIN}\///"
+      git_remote_branch_points_at_commit "${release_commit}" | grep "^${branch_type}/"
     fi
 }
 
@@ -60,7 +76,7 @@ function git_direct_ancestor_hash() {
   branch_type="${1:?}"
   base="${2:-${BRANCH_NAME_MASTER}}"
   git branch --remote --list "${REMOTE_ORIGIN}/${branch_type}/*" | \
-    sed -r "s/^[ \*]*//" | xargs -I {} git rev-parse --verify {} | \
+    grep -v HEAD | sed -r "s/^[ \*]*//" | xargs -I {} git rev-parse --verify {} | \
     grep -f /dev/fd/0 <(git rev-parse "${base}^@") || true
 }
 
