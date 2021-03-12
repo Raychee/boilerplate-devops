@@ -278,13 +278,13 @@ fi
 __b3bp_tmp_pos_opt_n="${#}"
 for __b3bp_tmp_pos_opt in "${__b3bp_tmp_pos_opt_required[@]}"; do
   __b3bp_tmp_varname="arg_${__b3bp_tmp_pos_opt}"
-  printf -v "${__b3bp_tmp_varname}" '%s' "${@:0:1}"
+  printf -v "${__b3bp_tmp_varname}" '%s' "${1}"
   shift 1 || true
 done
 for __b3bp_tmp_pos_opt in "${__b3bp_tmp_pos_opt_optional[@]}"; do
   __b3bp_tmp_varname="arg_${__b3bp_tmp_pos_opt}"
   __b3bp_tmp_default="${!__b3bp_tmp_varname}"
-  __b3bp_tmp_value="${@:0:1}"
+  __b3bp_tmp_value="${1}"
   __b3bp_tmp_value="${__b3bp_tmp_value:-${__b3bp_tmp_default}}"
   printf -v "${__b3bp_tmp_varname}" '%s' "${__b3bp_tmp_value}"
   shift 1 || true
