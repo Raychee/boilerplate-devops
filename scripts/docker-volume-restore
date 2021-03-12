@@ -69,6 +69,6 @@ else
 fi
 
 info "Restore docker volume \"${__docker_volume_name}\" from file ${__target_file_path}."
-exec_with_debug docker run --rm \
+eval_with_debug docker run --rm \
   --volume "${__docker_volume_name}":/__volume__ --volume "${__target_file_dir}":/__host_dir__ busybox \
   tar -${__tar_arg}xvf "/__host_dir__/${__target_file_name}" -C /__volume__ --strip 1

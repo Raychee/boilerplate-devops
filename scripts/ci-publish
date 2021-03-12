@@ -73,15 +73,15 @@ elif [[ ${__branch_name} = ${BRANCH_NAME_HOTFIX}/* ]]; then
 fi
 
 info "Sync branch \"${__branch_name}\"."
-exec_with_info git checkout "${__branch_name}"
-exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
-exec_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}"
+eval_with_info git checkout "${__branch_name}"
+eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__branch_name}"
+eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}"
 
 __created_pr=
 for __target_branch in "${__target_branches[@]}"; do
   info "Sync branch \"${__target_branch}\"."
-  exec_with_info git checkout "${__target_branch}"
-  exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
+  eval_with_info git checkout "${__target_branch}"
+  eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${__target_branch}"
   
   if git merge-base --is-ancestor "${__branch_name}" "${__target_branch}"; then
     notice "There are no commits between branch \"${__branch_name}\" and \"${__target_branch}\"." \
@@ -92,11 +92,11 @@ for __target_branch in "${__target_branches[@]}"; do
   __title="${arg_t:-}"
   __body="${arg_b:-}"
   __default_body="$(
-    git rev-list --no-merges --oneline --reverse "${__target_branch}..${__branch_name}" | sed -E "s/^[0-9a-f]* +//"
+    git rev-list --no-merges --oneline --reverse "${__target_branch}..${__branch_name}" | sed -r "s/^[0-9a-f]* +//"
   )"
   if [[ -z "${__title:-}" ]]; then
     IFS=$'\n' read -r -d '' -a __jira_issue_keys < <(
-      echo "${__default_body}" | sed -E "s/^[a-z]+: ([A-Z]+\\-[0-9]+) .*$/\\1/" | uniq && printf '\0'
+      echo "${__default_body}" | sed -r "s/^[a-z]+: ([A-Z]+\\-[0-9]+) .*$/\\1/" | uniq && printf '\0'
     )
     if is_array __jira_issue_keys; then
       IFS=$' ' __title="${__branch_name}: ${__jira_issue_keys[*]}"
@@ -110,11 +110,10 @@ for __target_branch in "${__target_branches[@]}"; do
   
   __created_pr=1
   info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
-  exec_with_info git checkout "${__branch_name}"
+  eval_with_info git checkout "${__branch_name}"
   info gh pr create --base "${__target_branch}" --title "${__title}"
-  if [[ -z "${DRY_RUN}" || "${DRY_RUN}" = "0" || "${DRY_RUN}" = "false" ]]; then
-    gh pr create --base "${__target_branch}" --title "${__title}" --body "${__body}"
-  fi
+  eval_ "gh pr create --base '${__target_branch}'" \
+    " --title '$(escape_chars "'" "${__title}")' --body '$(escape_chars "'" "${__body}")'"
 done
 
 if [[ -z "${__created_pr:-}" ]]; then
