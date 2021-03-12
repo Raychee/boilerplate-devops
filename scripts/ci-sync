@@ -91,19 +91,19 @@ for __branch_name in "${__branch_names[@]}"; do
     eval_with_info git rebase "${BRANCH_NAME_DEVELOP}" || exit_with_error \
         "It seems there are conflicts during rebase of branch \"${__branch_name}\" onto \"${BRANCH_NAME_DEVELOP}\"." \
         "Please resolve the conflicts, finish the rebase manually and then retry \"ci-sync\"."
-    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force
     
   elif [[ ${__branch_name} = ${BRANCH_NAME_RELEASE}/* ]]; then
 
     eval_with_info git checkout "${__branch_name}"
     eval_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
-    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force
 
   elif [[ ${__branch_name} = ${BRANCH_NAME_HOTFIX}/* ]]; then
 
     eval_with_info git checkout "${__branch_name}"
     eval_with_info git pull --rebase "${REMOTE_ORIGIN}" "${__branch_name}"
-    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force-with-lease
+    eval_with_info git push "${REMOTE_ORIGIN}" "${__branch_name}" --force
 
   elif [[ ${__branch_name} = "${BRANCH_NAME_MASTER}" ]]; then
 

@@ -111,9 +111,9 @@ for __target_branch in "${__target_branches[@]}"; do
   __created_pr=1
   info "Create pull requests from branch \"${__branch_name}\" onto \"${__target_branch}\"."
   eval_with_info git checkout "${__branch_name}"
-  info gh pr create --base "${__target_branch}" --title "${__title}"
-  eval_ "gh pr create --base '${__target_branch}'" \
-    " --title '$(escape_chars "'" "${__title}")' --body '$(escape_chars "'" "${__body}")'"
+  info gh pr create --base "${__target_branch}" --title "${__title}" --head "${__branch_name}"
+  eval_ "gh pr create --base '${__target_branch}' --head '${__branch_name}'" \
+        "--title '$(escape_chars "'" "${__title}")' --body '$(escape_chars "'" "${__body}")'"
 done
 
 if [[ -z "${__created_pr:-}" ]]; then
