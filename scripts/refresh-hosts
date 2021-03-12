@@ -94,13 +94,15 @@ __new_adds=
 __inplace_modifies=
 for __domain in "${__domains[@]}"; do
   info "Resolve ip address for ${__domain}."
-  __resp="$(curl -X POST "${IPADDRESS_URL}" --data host="${__domain}" --silent || 
-    exit_with_error "Curl returns error code ${?}.")"
+  __resp="$(
+    curl -X POST "${IPADDRESS_URL}" --data host="${__domain}" --silent || 
+      exit_with_error "Curl returns error code ${?}."
+  )"
   if echo "${__resp}" | grep "resolves to more than one IP address" --quiet; then
     info "It seems there are more than 1 ip address for ${__domain}. Only the first one is chosen."
     __ip="$(
-      echo "${__resp}" | grep --extended-regexp "type=\"radio\".*>$REGEX_FOR_IP<" | 
-      head -n 1 | sed -r "s/^.*\>(${REGEX_FOR_IP})\<.*$/\1/" || true  
+      echo "${__resp}" | grep --extended-regexp "type=\"radio\".*>${REGEX_FOR_IP}<" | 
+      head -n 1 | sed -r "s/^.*>(${REGEX_FOR_IP})<.*$/\1/" || true  
     )"
   else
     __ip="$(
