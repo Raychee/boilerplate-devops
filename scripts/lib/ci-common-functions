@@ -37,8 +37,8 @@ function is_tag_existing() {
 
 function git_local_branches_without_origin() {
     git branch --remote --list "${REMOTE_ORIGIN}/*" | \
-      sed -E -e "s/^[ \*]*${REMOTE_ORIGIN}\///" -e 's/(\^|\$|\.|\$|\*|\?|\-|\{|\}|\(|\))/\\\1/g' -e 's/(.*)/\^\1\$/' | \
-      grep -E -v -f /dev/fd/0 <(git branch | sed -E 's/^[ \*]*//') || true
+      sed -r "s/^[ \*]*${REMOTE_ORIGIN}\///" | regex_escape_pipe | sed -r 's/(.*)/\^\1\$/' | \
+      grep --extended-regexp -v -f /dev/fd/0 <(git branch | sed -r 's/^[ \*]*//') || true
 }
 
 function git_direct_ancestor_branch() {
@@ -50,7 +50,7 @@ function git_direct_ancestor_branch() {
     release_commit="$(git_direct_ancestor_hash "${branch_type}" "${base}" | head -n 1)"
     if [[ -n "${release_commit:-}" ]]; then
       git branch --remote --points-at "${release_commit}" --list "${REMOTE_ORIGIN}/${branch_type}/*" | \
-        sed -E "s/^[ \*]*${REMOTE_ORIGIN}\///"
+        sed -r "s/^[ \*]*${REMOTE_ORIGIN}\///"
     fi
 }
 
@@ -60,14 +60,14 @@ function git_direct_ancestor_hash() {
   branch_type="${1:?}"
   base="${2:-${BRANCH_NAME_MASTER}}"
   git branch --remote --list "${REMOTE_ORIGIN}/${branch_type}/*" | \
-    sed -E "s/^[ \*]*//" | xargs -I {} git rev-parse --verify {} | \
+    sed -r "s/^[ \*]*//" | xargs -I {} git rev-parse --verify {} | \
     grep -f /dev/fd/0 <(git rev-parse "${base}^@") || true
 }
 
 function github_prs_for_branch() {
   local branch_name
   branch_name=${1:?}
-  gh pr list --state open --limit 100 | grep "\t${branch_name}\t" | sed -E "s/^([0-9]+)\t.*$/\\1/" || true
+  gh pr list --state open --limit 100 | grep "\t${branch_name}\t" | sed -r "s/^([0-9]+)\t.*$/\\1/" || true
 }
 
 function is_version() {

@@ -127,8 +127,8 @@ for __image_dir_name in "${__image_names[@]}"; do
       (cd "${__image_dir}" && ./"${SCRIPT_PREBUILD_NAME}")
     fi
     info "Build image: ${__image_name}:${__image_version}"
-    exec_with_debug docker build -t "${__image_tag}" "${__image_dir}"
-    exec_with_debug docker push "${__image_tag}"
+    eval_with_debug docker build -t "${__image_tag}" "${__image_dir}"
+    eval_with_debug docker push "${__image_tag}"
   else
     info "Image ${__image_tag} already exists."
   fi

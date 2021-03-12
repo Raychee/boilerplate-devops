@@ -45,7 +45,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ci-common"
 setup
 
 info "Prune remote branches."
-exec_with_info git remote prune "${REMOTE_ORIGIN}"
+eval_with_info git remote prune "${REMOTE_ORIGIN}"
 
 IFS=$'\n' read -r -d '' -a __target_branches < <(git_local_branches_without_origin && printf '\0')
 if is_array __target_branches; then
@@ -68,9 +68,9 @@ if is_array __target_branches; then
     if [[ ${__confirm:-} = "1" ]]; then
       __current_branch=$(current_branch_name)
       if [[ ${__current_branch} = "${__branch_name}" ]]; then
-        exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+        eval_with_info git checkout "${BRANCH_NAME_DEVELOP}"
       fi
-      exec_with_info git branch -D "${__branch_name}"
+      eval_with_info git branch -D "${__branch_name}"
     fi
   done
 else

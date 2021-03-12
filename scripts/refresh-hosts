@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# This file:
+#
+#  - Refreshes hosts file with ip addresses for input domains.
+#
+# Usage:
+#
+#  LOG_LEVEL=7 gh-hosts
+
+### Global Variable Definition
+##############################################################################
+
+GITHUB_DOMAINS=(
+  "github.com"
+  "gist.github.com"
+  "assets-cdn.github.com"
+  "raw.githubusercontent.com"
+  "gist.githubusercontent.com"
+  "cloud.githubusercontent.com"
+  "camo.githubusercontent.com"
+  "avatars.githubusercontent.com"
+  "avatars0.githubusercontent.com"
+  "avatars1.githubusercontent.com"
+  "avatars2.githubusercontent.com"
+  "avatars3.githubusercontent.com"
+  "avatars4.githubusercontent.com"
+  "avatars5.githubusercontent.com"
+  "avatars6.githubusercontent.com"
+  "avatars7.githubusercontent.com"
+  "avatars8.githubusercontent.com"
+  "github.githubassets.com"
+)
+REGEX_FOR_IP="(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)"
+
+IPADDRESS_URL="${IPADDRESS_URL:-https://www.ipaddress.com/ip-lookup}"
+HOSTS_FILE_PATH="${HOSTS_FILE_PATH:-/etc/hosts}"
+
+
+### Parse commandline options
+##############################################################################
+
+# Commandline options. This defines the usage page, and is used to parse cli
+# opts & defaults from. The parsing is unforgiving so be precise in your syntax
+# - A short option must be preset for every long option; but every short option
+#   need not have a long option
+# - `--` is respected as the separator between options and arguments
+# - We do not bash-expand defaults, so setting '~/app' as a default will not resolve to ${HOME}.
+#   you can use bash variables to work around this (so use ${HOME} instead)
+
+# shellcheck disable=SC2015
+read -r -d '' __usage <<- EOF || true # exits non-zero when EOF encountered
+  -p --preset [preset] A preset of domains to refresh. If provided, must be one of the following: github 
+  -h --help            This page.
+  
+  ...domains           Domains to refresh. Cannot be specified at the same time as -p (--preset).
+EOF
+
+# shellcheck disable=SC2015
+read -r -d '' __helptext <<- EOF || true # exits non-zero when EOF encountered
+ This script resolves the ip addresses of the input domains by querying the website: 
+ -  ${IPADDRESS_URL}
+ and stores the ip - domain mapping into the hosts file ${HOSTS_FILE_PATH}.
+EOF
+
+# shellcheck source=lib/common
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common"
+
+
+### Validation
+##############################################################################
+
+if [[ -n "${arg_p:-}" ]] && is_array arg_domains; then
+  help "-p (--preset) and domains cannot be specified at the same time." 
+fi
+if [[ -z "${arg_p:-}" ]] && ! is_array arg_domains; then
+  help "Either -p (--preset) or domains must be specified." 
+fi
+if [[ -n "${arg_p:-}" && "${arg_p:-}" != "github" ]]; then
+  help "-p (--preset) must be one of the following: github, got ${arg_p}."
+fi
+
+
+### Runtime
+##############################################################################
+
+__domains=()
+if is_array arg_domains; then
+  __domains=("${arg_domains[@]}")
+elif [[ "${arg_p:-}" = "github" ]]; then
+  __domains=("${GITHUB_DOMAINS[@]}")
+fi
+
+__new_adds=
+__inplace_modifies=
+for __domain in "${__domains[@]}"; do
+  info "Resolve ip address for ${__domain}."
+  __resp="$(curl -X POST "${IPADDRESS_URL}" --data host="${__domain}" --silent || 
+    exit_with_error "Curl returns error code ${?}.")"
+  if echo "${__resp}" | grep "resolves to more than one IP address" --quiet; then
+    info "It seems there are more than 1 ip address for ${__domain}. Only the first one is chosen."
+    __ip="$(
+      echo "${__resp}" | grep --extended-regexp "type=\"radio\".*>$REGEX_FOR_IP<" | 
+      head -n 1 | sed -r "s/^.*\>(${REGEX_FOR_IP})\<.*$/\1/" || true  
+    )"
+  else
+    __ip="$(
+      echo "${__resp}" | grep --extended-regexp "${REGEX_FOR_IP}.*\($(regex_escape "${__domain}")\)" --only-matching |
+        head -n 1 | sed -r "s/^($REGEX_FOR_IP).*/\\1/" || true
+    )"
+  fi
+  if [[ -z "${__ip:-}" ]]; then
+    error "Ip address for ${__domain} cannot be resolved. Here is the response."
+    error "${__resp}"
+    exit 1
+  fi
+  info "Ip address for ${__domain} is ${__ip}."
+  if grep --extended-regexp "^${REGEX_FOR_IP}[ \t]+$(regex_escape "${__domain}")([ \t#]+.*)?$" "${HOSTS_FILE_PATH}" --quiet; then
+    info "Ip config has been in file ${HOSTS_FILE_PATH}. It will be replaced."
+    __sed_expr="s/^${REGEX_FOR_IP}([ \t]+$(regex_escape "${__domain}")([ \t#]+.*)?)$/${__ip}\5/"
+    __inplace_modifies="${__inplace_modifies} -e '$(escape_chars "'" "${__sed_expr}")'"
+  else
+    info "Ip config is new and will be add to file ${HOSTS_FILE_PATH}."
+    __new_adds="${__new_adds}"$'\n'"${__ip} ${__domain}"
+  fi
+done
+
+if [[ -n "${__inplace_modifies:-}" ]]; then
+  info "Modify the file ${HOSTS_FILE_PATH} for existing domain configs."
+  eval_with_debug sed -r "${__inplace_modifies}" -i.old "${HOSTS_FILE_PATH}"
+fi
+
+if [[ -n "${__new_adds:-}" ]]; then
+  info "Append the file ${HOSTS_FILE_PATH} for new domain configs."
+  eval_with_debug "echo $'\n# Added by gh-hosts for accelerating github connections${__new_adds}' >> ${HOSTS_FILE_PATH}"
+fi

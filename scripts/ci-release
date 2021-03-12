@@ -63,8 +63,8 @@ if [[ "${__version_bump_method}" != "major" &&
 fi
 
 info "Sync branch \"${BRANCH_NAME_MASTER}\"."
-exec_with_info git checkout "${BRANCH_NAME_MASTER}"
-exec_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
+eval_with_info git checkout "${BRANCH_NAME_MASTER}"
+eval_with_info git pull --ff-only "${REMOTE_ORIGIN}" "${BRANCH_NAME_MASTER}"
 
 __version="${arg_version:-}"
 __base_hash="$(git rev-parse --verify "${__base}")"
@@ -77,8 +77,8 @@ if ! git merge-base --is-ancestor "${__base_hash}" "${BRANCH_NAME_MASTER}"; then
 fi
 
 info "Fetch latest information from remote ${REMOTE_ORIGIN}."
-exec_with_info git fetch
-exec_with_info git fetch --tags
+eval_with_info git fetch
+eval_with_info git fetch --tags
 
 
 __existing_version_tag="$(get_latest_version_tag "${__base_hash}")"
@@ -89,11 +89,11 @@ fi
 
 if [[ -z "${__version:-}" ]]; then
   __release_branch="$(git_direct_ancestor_branch "${BRANCH_NAME_RELEASE}" "${__base_hash}")"
-  __version="$(echo "${__release_branch:-}" | sed -E "s/^${BRANCH_NAME_RELEASE}\///")"
+  __version="$(echo "${__release_branch:-}" | sed -r "s/^${BRANCH_NAME_RELEASE}\///")"
 fi
 if [[ -z "${__version:-}" ]]; then
   __hotfix_branch="$(git_direct_ancestor_branch "${BRANCH_NAME_HOTFIX}" "${__base_hash}")"
-  __version="$(echo "${__hotfix_branch:-}" | sed -E "s/^${BRANCH_NAME_HOTFIX}\///")"
+  __version="$(echo "${__hotfix_branch:-}" | sed -r "s/^${BRANCH_NAME_HOTFIX}\///")"
 fi
 if [[ -z "${__version:-}" ]]; then
   __last_version_tag="$(git tag --list "${PROJECT_VERSION_PREFIX}*" --sort=-version:refname | head -n 1)"
@@ -107,8 +107,8 @@ if [[ -z "${__version:-}" ]]; then
 fi
 
 info "Release version ${__version} on \"${__base}\"."
-exec_with_info git tag "${__version}" "${__base_hash}"
-exec_with_info git push --tags
+eval_with_info git tag "${__version}" "${__base_hash}"
+eval_with_info git push --tags
 
 if [[ ${arg_k} = "0" ]]; then
   __branches_to_delete=()
@@ -129,9 +129,9 @@ if [[ ${arg_k} = "0" ]]; then
       fi
       if [[ ${__confirm:-} = "1" ]]; then
         if is_branch_existing "${__branch_to_delete}"; then
-          exec_with_info git branch -d "${__branch_to_delete}"
+          eval_with_info git branch -d "${__branch_to_delete}"
         fi
-        exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_to_delete}"
+        eval_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_to_delete}"
       fi
     done
   fi

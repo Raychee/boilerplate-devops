@@ -138,26 +138,26 @@ fi
 if [[ ${arg_p:?} = "1" ]]; then
   
   if [[ "${__docker_compose_only}" = "1" ]]; then
-    exec_with_debug docker-compose "${__docker_compose_args}" ps
+    eval_with_debug docker-compose "${__docker_compose_args}" ps
   else
-    exec_with_debug docker stack ps "${__stack}"
+    eval_with_debug docker stack ps "${__stack}"
   fi
   
 elif [[ ${arg_s:?} = "1" ]]; then
   
   if [[ "${__docker_compose_only}" = "1" ]]; then
-    exec_with_debug docker-compose "${__docker_compose_args}" ps
+    eval_with_debug docker-compose "${__docker_compose_args}" ps
   else
-    exec_with_debug docker stack services "${__stack}"
+    eval_with_debug docker stack services "${__stack}"
   fi
 
 elif [[ ${arg_r:?} = "1" ]]; then
   
   if [[ "${__docker_compose_only}" = "1" ]]; then
-    exec_with_debug docker-compose "${__docker_compose_args}" stop
-    exec_with_debug docker-compose "${__docker_compose_args}" rm --force
+    eval_with_debug docker-compose "${__docker_compose_args}" stop
+    eval_with_debug docker-compose "${__docker_compose_args}" rm --force
   else
-    exec_with_debug docker stack rm "${__stack}"  
+    eval_with_debug docker stack rm "${__stack}"  
   fi
   
 else
@@ -168,10 +168,10 @@ else
   fi
   if [[ "${__docker_compose_only}" = "1" ]]; then
     info "Stack ${__stack} is for docker-compose only. Deploy with \"docker-compose up\"."
-    exec_with_debug docker-compose "${__docker_compose_args}" up --detach
+    eval_with_debug docker-compose "${__docker_compose_args}" up --detach
   else
     info "Deploy stack ${__stack} into swarm."
-    exec_with_debug docker stack deploy "${__docker_deploy_args}" "${__stack}"  
+    eval_with_debug docker stack deploy "${__docker_deploy_args}" "${__stack}"  
   fi
   
 fi

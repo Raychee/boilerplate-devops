@@ -27,7 +27,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ci-common-functions"
 
 function setup() {
   local s
-  s=$(exec_with_debug git stash)
+  s=$(eval_with_debug git stash)
   if [[ -n $s && $s != "No local changes to save" && $s != "没有要保存的本地修改"                                                                                                                         ]]; then
     info "The current working space is stashed and cleaned."
     __stashed=$(current_branch_name)
@@ -43,13 +43,13 @@ function teardown() {
     __exiting=1
     __current_branch=$(current_branch_name)
     if is_branch_existing "${__starting_branch}" && [[ "${__current_branch}" != "${__starting_branch}" ]]; then
-      exec_with_debug git checkout "${__starting_branch}"
+      eval_with_debug git checkout "${__starting_branch}"
       __current_branch="${__starting_branch}"
     fi
     if [[ -n "${__stashed}" ]]; then
       if [[ "${__stashed}" == "${__current_branch}" ]]; then
         info "Restore the working space by stash pop."
-        exec_with_debug git stash pop
+        eval_with_debug git stash pop
       else
         if is_branch_existing "${__stashed}"; then
           __reason="the current branch is \"${__current_branch}\""
@@ -65,12 +65,6 @@ function teardown() {
     fi
     exit "${exit_code}"
   fi
-}
-
-function exit_with_error() {
-  exit_code=$?
-  error "$@"
-  exit $exit_code
 }
 
 

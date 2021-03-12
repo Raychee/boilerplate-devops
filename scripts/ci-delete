@@ -73,17 +73,17 @@ fi
 if [[ "${__confirm:-}" = "1" ]]; then
   __current_branch=$(current_branch_name)
   if [[ ${__current_branch} = "${__branch_name}" ]]; then
-    exec_with_info git checkout "${BRANCH_NAME_DEVELOP}"
+    eval_with_info git checkout "${BRANCH_NAME_DEVELOP}"
   fi
   info "Check pull requests of branch \"${__branch_name}\"."
   IFS=$'\n' read -r -d '' -a __existing_prs < <(github_prs_for_branch "${__branch_name}" && printf '\0')
   if is_array __existing_prs; then
     for __pr in "${__existing_prs[@]}"; do
       info "Close pull request ${__pr}."
-      gh pr close "${__pr}"
+      eval_with_info gh pr close "${__pr}"
     done
   fi
   info "Delete branch \"${__branch_name}\" locally and remotely."
-  exec_with_info git branch -d "${__branch_name}"
-  exec_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_name}"
+  eval_with_info git branch -d "${__branch_name}"
+  eval_with_info git push "${REMOTE_ORIGIN}" --delete "${__branch_name}"
 fi
