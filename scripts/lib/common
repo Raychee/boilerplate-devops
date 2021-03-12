@@ -82,7 +82,7 @@ function __detect_default() {
       fi
     fi
   fi
-  echo "${default_value}"
+  echo "${default_value:-}"
 }
 
 
